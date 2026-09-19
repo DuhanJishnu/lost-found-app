@@ -1,8 +1,6 @@
 from fastapi import FastAPI
-from sqlalchemy import text
 
-from app.db.database import AsyncSessionLocal
-
+from app.api.items import router as items_router
 
 
 app = FastAPI(
@@ -11,8 +9,12 @@ app = FastAPI(
     version="0.1.0",
 )
 
+
+app.include_router(items_router)
+
+
 @app.get("/")
-def root():
+async def root():
     return {
         "message": "Lost & Found API is running"
     }
@@ -20,10 +22,6 @@ def root():
 
 @app.get("/health")
 async def health():
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(text("SELECT 1"))
-
     return {
-        "status": "healthy",
-        "database": result.scalar() == 1,
+        "status": "healthy"
     }
