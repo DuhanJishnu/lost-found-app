@@ -2,15 +2,23 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.item import Item, ItemStatus, ItemType
-
+from app.models.item_image import ItemImage
 
 class ItemRepository:
 
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create(self, item: Item) -> Item:
+    async def create_with_image(
+        self,
+        item: Item,
+        image: ItemImage | None = None,
+    ) -> Item:
+
         self.db.add(item)
+
+        if image:
+            item.images.append(image)
 
         await self.db.commit()
         await self.db.refresh(item)

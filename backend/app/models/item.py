@@ -2,10 +2,10 @@ from datetime import datetime
 from enum import Enum
 
 from sqlalchemy import DateTime, Float, ForeignKey, String, Text, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-
+from app.models.item_image import ItemImage
 
 class ItemType(str, Enum):
     LOST = "LOST"
@@ -53,9 +53,10 @@ class Item(Base):
         index=True,
     )
 
-    image_url: Mapped[str | None] = mapped_column(
-        String(500),
-        nullable=True,
+    images: Mapped[list["ItemImage"]] = relationship(
+        "ItemImage",
+        back_populates="item",
+        cascade="all, delete-orphan",
     )
 
     latitude: Mapped[float | None] = mapped_column(

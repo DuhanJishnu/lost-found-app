@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.api.items import router as items_router
+from app.api.storage import router as storage_router
 
 
 app = FastAPI(
@@ -11,6 +12,7 @@ app = FastAPI(
 
 
 app.include_router(items_router)
+app.include_router(storage_router)
 
 
 @app.get("/")

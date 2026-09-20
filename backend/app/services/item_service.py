@@ -20,7 +20,6 @@ class ItemService:
             title=data.title,
             description=data.description,
             category=data.category,
-            image_url=data.image_url,
             latitude=data.latitude,
             longitude=data.longitude,
         )

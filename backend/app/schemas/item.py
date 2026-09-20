@@ -1,6 +1,7 @@
 from enum import Enum
 
 from pydantic import BaseModel, Field
+from app.schemas.item_image import ItemImageResponse
 
 class ItemType(str, Enum):
     LOST = "LOST"
@@ -11,8 +12,6 @@ class CreateItemRequest(BaseModel):
     title: str = Field(min_length=2, max_length=200)
     description: str = Field(min_length=5, max_length=5000)
     category: str = Field(min_length=2, max_length=100)
-
-    image_url: str | None = None
 
     latitude: float | None = Field(
         default=None,
@@ -33,9 +32,9 @@ class ItemResponse(BaseModel):
     title: str
     description: str
     category: str
-    image_url: str | None
     latitude: float | None
     longitude: float | None
+    images: list[ItemImageResponse] = []
 
     model_config = {
         "from_attributes": True

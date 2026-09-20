@@ -73,3 +73,61 @@ async def get_items(
 The `*` means:
 
 Everything after `*` must be passed using its parameter name.
+
+
+### Cloudflare R2 image upload — short summary
+
+Think:
+
+> **Frontend carries the image → Backend gives permission → R2 stores the image.**
+
+**Upload flow:**
+
+```text
+User selects image
+      ↓
+Frontend
+      ↓
+POST /storage/upload-url
+      ↓
+FastAPI
+      ↓
+Creates temporary PUT URL
+      ↓
+Frontend receives:
+  upload_url
+  object_key
+      ↓
+Frontend PUTs actual image directly to R2
+      ↓
+R2 stores:
+items/abc123.jpg
+```
+
+### What each thing does
+
+* **Frontend:** Has the actual image and uploads it.
+* **FastAPI:** Never receives the image. It creates a temporary **presigned URL**.
+* **R2:** Actually stores the image.
+* **Object key:** The image's name/address, e.g. `items/abc123.jpg`.
+* **Database:** Stores the object key along with the Lost & Found item.
+
+### Download flow
+
+```text
+Frontend asks for image
+        ↓
+FastAPI gets object_key from DB
+        ↓
+FastAPI creates temporary GET URL
+        ↓
+Frontend receives URL
+        ↓
+Frontend gets image directly from R2
+```
+
+### Remember this
+
+> **Backend gives the key. Frontend carries the file. R2 keeps the file.**
+
+And your R2 bucket stays **private**; presigned URLs provide temporary access when needed.
