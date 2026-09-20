@@ -48,9 +48,28 @@ app/
 *   **Do:** Execute all business rules (e.g., triggering notifications, calling external APIs like Gemini, calculating matches). 
 *   **Don't:** Parse HTTP payloads (`request.json()`) or write direct SQL/ORM commands (`db.execute()`).
 *   **Knowledge Nugget:** This layer operates entirely on validated Python objects. Because it is ignorant of both the Web network and the Database, you can test 100% of your business logic using fast, isolated unit tests.
+*   The service shouldn't contain SQL. Thus filtering also belong to repository.
 
 ### 4. Repository (`app/repositories/item_repository.py`)
 **Role:** The Vault.
 *   **Do:** Handle data persistence (CRUD operations, `add`, `commit`, `refresh`, complex SQL queries).
 *   **Don't:** Know *why* data is being saved. Never put domain logic, email triggers, or Redis caching here.
 *   **Knowledge Nugget:** The Repository pattern abstracts the database. If you switch from PostgreSQL to MongoDB, or from SQLAlchemy to SQLModel, you only rewrite this single folder. The rest of your app remains untouched.
+
+## Important Things to Remember
+The `*`
+
+This is an important Python feature:
+
+```
+async def get_items(
+    self,
+    *,
+    item_type: ItemType | None = None,
+    category: str | None = None,
+    ...
+):
+```
+The `*` means:
+
+Everything after `*` must be passed using its parameter name.
