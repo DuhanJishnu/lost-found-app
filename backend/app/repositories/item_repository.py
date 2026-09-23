@@ -1,33 +1,49 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.item import Item, ItemStatus, ItemType
 from app.models.item_image import ItemImage
 
 class ItemRepository:
-
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create_with_image(
+    async def create_with_images(
         self,
         item: Item,
-        image: ItemImage | None = None,
+        image_keys: list[tuple[str, str]],
     ) -> Item:
 
         self.db.add(item)
 
-        if image:
-            item.images.append(image)
+        for object_key, content_type in image_keys:
+            item.images.append(
+                ItemImage(
+                    object_key=object_key,
+                    content_type=content_type,
+                )
+            )
 
         await self.db.commit()
-        await self.db.refresh(item)
 
-        return item
-
-    async def get_by_id(self, item_id: int) -> Item | None:
         result = await self.db.execute(
-            select(Item).where(Item.id == item_id)
+            select(Item)
+            .options(selectinload(Item.images))
+            .where(Item.id == item.id)
+        )
+
+        return result.scalar_one()
+
+    async def get_by_id(
+        self,
+        item_id: int,
+    ) -> Item | None:
+
+        result = await self.db.execute(
+            select(Item)
+            .options(selectinload(Item.images))
+            .where(Item.id == item_id)
         )
 
         return result.scalar_one_or_none()
@@ -42,15 +58,17 @@ class ItemRepository:
         offset: int = 0,
     ) -> list[Item]:
 
-        query = select(Item)
+        query = select(Item).options(
+            selectinload(Item.images)
+        )
 
-        if item_type is not None:
+        if item_type:
             query = query.where(Item.type == item_type)
 
-        if category is not None:
+        if category:
             query = query.where(Item.category == category)
 
-        if status is not None:
+        if status:
             query = query.where(Item.status == status)
 
         query = (

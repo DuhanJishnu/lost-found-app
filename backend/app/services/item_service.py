@@ -5,7 +5,10 @@ from app.schemas.item import CreateItemRequest
 
 class ItemService:
 
-    def __init__(self, repository: ItemRepository):
+    def __init__(
+        self,
+        repository: ItemRepository,
+    ):
         self.repository = repository
 
     async def create_item(
@@ -24,9 +27,40 @@ class ItemService:
             longitude=data.longitude,
         )
 
-        return await self.repository.create(item)
+        image_keys = [
+            (key, self._get_content_type(key))
+            for key in data.image_keys
+        ]
 
-    async def get_item(self, item_id: int) -> Item | None:
+        return await self.repository.create_with_images(
+            item,
+            image_keys,
+        )
+
+    @staticmethod
+    def _get_content_type(
+        object_key: str,
+    ) -> str:
+
+        extension = object_key.rsplit(".", 1)[-1].lower()
+
+        content_types = {
+            "jpg": "image/jpeg",
+            "jpeg": "image/jpeg",
+            "png": "image/png",
+            "webp": "image/webp",
+        }
+
+        return content_types.get(
+            extension,
+            "application/octet-stream",
+        )
+
+    async def get_item(
+        self,
+        item_id: int,
+    ) -> Item | None:
+
         return await self.repository.get_by_id(item_id)
 
     async def get_items(

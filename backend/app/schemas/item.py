@@ -13,6 +13,12 @@ class CreateItemRequest(BaseModel):
     description: str = Field(min_length=5, max_length=5000)
     category: str = Field(min_length=2, max_length=100)
 
+    # allowing 5 images per item for now
+    image_keys: list[str] = Field(
+        default_factory=list,
+        max_length=5,
+    )
+
     latitude: float | None = Field(
         default=None,
         ge=-90,
@@ -34,7 +40,9 @@ class ItemResponse(BaseModel):
     category: str
     latitude: float | None
     longitude: float | None
-    images: list[ItemImageResponse] = []
+    images: list[ItemImageResponse] = Field(
+        default_factory=list
+    )
 
     model_config = {
         "from_attributes": True
