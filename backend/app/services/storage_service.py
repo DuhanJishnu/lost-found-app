@@ -50,3 +50,39 @@ class StorageService:
         )
 
         return upload_url, object_key
+
+    def generate_download_url(
+        self,
+        *,
+        object_key: str,
+    ) -> str:
+
+        download_url = self.client.generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": self.bucket_name,
+                "Key": object_key,
+            },
+            ExpiresIn=300,
+        )
+
+        return download_url
+
+    def get_object(
+        self,
+        *,
+        object_key: str,
+    ) -> tuple[bytes, str]:
+
+        response = self.client.get_object(
+            Bucket=self.bucket_name,
+            Key=object_key,
+        )
+
+        image_bytes = response["Body"].read()
+        content_type = response.get(
+            "ContentType",
+            "image/jpeg",
+        )
+
+        return image_bytes, content_type

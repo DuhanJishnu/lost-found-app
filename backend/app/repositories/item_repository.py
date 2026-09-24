@@ -48,6 +48,19 @@ class ItemRepository:
 
         return result.scalar_one_or_none()
 
+    async def get_by_id_with_images(
+        self,
+        item_id: int,
+    ) -> Item | None:
+
+        result = await self.db.execute(
+            select(Item)
+            .options(selectinload(Item.images))
+            .where(Item.id == item_id)
+        )
+
+        return result.scalar_one_or_none()
+
     async def get_items(
         self,
         *,

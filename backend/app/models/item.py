@@ -7,6 +7,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 from app.models.item_image import ItemImage
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.item_embedding import ItemEmbedding
+
 class ItemType(str, Enum):
     LOST = "LOST"
     FOUND = "FOUND"
@@ -56,6 +61,13 @@ class Item(Base):
     images: Mapped[list["ItemImage"]] = relationship(
         "ItemImage",
         back_populates="item",
+        cascade="all, delete-orphan",
+    )
+
+    embedding: Mapped["ItemEmbedding | None"] = relationship(
+        "ItemEmbedding",
+        back_populates="item",
+        uselist=False,
         cascade="all, delete-orphan",
     )
 

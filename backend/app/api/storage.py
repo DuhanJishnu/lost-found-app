@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends
 
 from app.schemas.storage import (
+    DownloadUrlRequest,
+    DownloadUrlResponse,
     UploadUrlRequest,
     UploadUrlResponse,
 )
@@ -36,4 +38,22 @@ async def create_upload_url(
     return UploadUrlResponse(
         upload_url=upload_url,
         object_key=object_key,
+    )
+
+@router.post(
+    "/download-url",
+    response_model=DownloadUrlResponse,
+)
+async def create_download_url(
+    data: DownloadUrlRequest,
+    storage: StorageService = Depends(
+        get_storage_service
+    ),
+):
+    download_url = storage.generate_download_url(
+        object_key=data.object_key,
+    )
+
+    return DownloadUrlResponse(
+        download_url=download_url,
     )

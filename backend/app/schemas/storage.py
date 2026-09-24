@@ -10,3 +10,14 @@ class UploadUrlRequest(BaseModel):
 class UploadUrlResponse(BaseModel):
     upload_url: str
     object_key: str
+
+
+class DownloadUrlRequest(BaseModel):
+    object_key: str = Field(
+        min_length=1,
+        max_length=500,
+    )
+
+
+class DownloadUrlResponse(BaseModel):
+    download_url: str

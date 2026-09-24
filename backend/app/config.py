@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     r2_secret_access_key: str
     r2_bucket_name: str
 
+    gemini_api_key: str
+    gemini_embedding_model: str = "gemini-embedding-2"
+    gemini_embedding_dimension: int = 768
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
