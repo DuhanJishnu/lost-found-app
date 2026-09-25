@@ -7,6 +7,7 @@ from app.repositories.item_embedding_repository import (
 )
 from app.repositories.item_repository import ItemRepository
 from app.schemas.embedding import GenerateEmbeddingResponse
+from app.schemas.match import SimilarItemResponse
 from app.services.embedding_service import EmbeddingService
 from app.services.item_embedding_service import (
     ItemEmbeddingService,
@@ -23,11 +24,11 @@ router = APIRouter(
 def get_item_embedding_service(
     db: AsyncSession = Depends(get_db),
 ) -> ItemEmbeddingService:
-
     return ItemEmbeddingService(
         embedding_repository=ItemEmbeddingRepository(db),
         embedding_service=EmbeddingService(),
         storage_service=StorageService(),
+        item_repository=ItemRepository(db),
     )
 
 
@@ -74,3 +75,37 @@ async def generate_item_embedding(
         dimension=len(embedding.embedding),
         model=embedding.model,
     )
+
+@router.get(
+    "/items/{item_id}/similar",
+    response_model=list[SimilarItemResponse],
+)
+async def search_similar_items(
+    item_id: int,
+    limit: int = 10,
+    service: ItemEmbeddingService = Depends(
+        get_item_embedding_service
+    ),
+):
+    try:
+        results = await service.search_similar_items(
+            item_id=item_id,
+            limit=limit,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        )
+
+    return [
+        SimilarItemResponse(
+            item_id=item.id,
+            title=item.title,
+            description=item.description,
+            category=item.category,
+            type=item.type.value,
+            similarity_score=1 - distance,
+        )
+        for item, distance in results
+    ]

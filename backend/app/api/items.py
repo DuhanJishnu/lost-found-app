@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
@@ -6,7 +6,8 @@ from app.models.item import ItemStatus, ItemType
 from app.repositories.item_repository import ItemRepository
 from app.schemas.item import CreateItemRequest, ItemResponse
 from app.services.item_service import ItemService
-
+from app.services.background_tasks import process_item_background
+from app.services.job_queue import enqueue_item_processing
 
 router = APIRouter(
     prefix="/items",
@@ -17,9 +18,7 @@ router = APIRouter(
 def get_item_service(
     db: AsyncSession = Depends(get_db),
 ) -> ItemService:
-
     repository = ItemRepository(db)
-
     return ItemService(repository)
 
 
@@ -30,15 +29,30 @@ def get_item_service(
 )
 async def create_item(
     data: CreateItemRequest,
+    background_tasks: BackgroundTasks,
     service: ItemService = Depends(get_item_service),
 ):
     # Temporary user until authentication is implemented.
     user_id = 1
 
-    return await service.create_item(
+    item = await service.create_item(
         user_id=user_id,
         data=data,
     )
+
+    # Process the item after the response/request work is completed.
+    
+    # --- FastApi service ---
+    # background_tasks.add_task(
+    #     process_item_background,
+    #     item.id,
+    # )
+
+    # Redis worker queue.
+    await enqueue_item_processing(item.id)
+
+    return item
+
 
 @router.get(
     "",
