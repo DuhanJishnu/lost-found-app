@@ -32,6 +32,9 @@ class EmbeddingService:
                     mime_type=mime_type,
                 ),
             ],
+             config=types.EmbedContentConfig(
+                output_dimensionality=768
+            )
         )
 
         return result.embeddings[0].values
