@@ -14,6 +14,13 @@ class User(Base):
         index=True,
     )
 
+    google_id: Mapped[str | None] = mapped_column(
+        String(255),
+        unique=True,
+        index=True,
+        nullable=True,
+    )
+
     name: Mapped[str] = mapped_column(
         String(100),
         nullable=False,
