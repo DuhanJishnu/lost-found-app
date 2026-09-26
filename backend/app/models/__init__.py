@@ -3,6 +3,7 @@ from app.models.item_image import ItemImage
 from app.models.match import Match
 from app.models.user import User
 from app.models.item_embedding import ItemEmbedding
+from app.models.notification import Notification
 
 __all__ = [
     "User",
@@ -12,4 +13,5 @@ __all__ = [
     "ItemImage",
     "ItemEmbedding",
     "Match",
+    "Notification"
 ]
