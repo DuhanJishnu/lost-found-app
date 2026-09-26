@@ -3,9 +3,11 @@ from app.repositories.item_embedding_repository import (
 )
 from app.repositories.item_repository import ItemRepository
 from app.repositories.match_repository import MatchRepository
+from app.repositories.notification_repository import NotificationRepository
 from app.services.embedding_service import EmbeddingService
 from app.services.item_embedding_service import ItemEmbeddingService
 from app.services.match_service import MatchService
+from app.services.notification_service import NotificationService
 from app.services.storage_service import StorageService
 
 
@@ -17,6 +19,7 @@ class ItemProcessingService:
         embedding_repository = ItemEmbeddingRepository(db)
 
         match_repository = MatchRepository(db)
+        notification_repository = NotificationRepository(db)
 
         self.item_repository = item_repository
 
@@ -31,6 +34,9 @@ class ItemProcessingService:
             item_repository=item_repository,
             embedding_repository=embedding_repository,
             match_repository=match_repository,
+            notification_service=NotificationService(
+                notification_repository
+            ),
         )
 
     async def process_item(self, item_id: int):

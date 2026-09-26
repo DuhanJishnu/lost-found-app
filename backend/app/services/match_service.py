@@ -1,14 +1,14 @@
-from app.repositories.item_embedding_repository import (
-    ItemEmbeddingRepository,
-)
+from app.repositories.item_embedding_repository import ItemEmbeddingRepository
 from app.repositories.item_repository import ItemRepository
 from app.repositories.match_repository import MatchRepository
 from app.models.item import ItemType
+
 from app.services.matching_utils import (
     calculate_distance_km,
     calculate_location_score,
 )
 
+from app.services.notification_service import NotificationService
 
 class MatchService:
     MATCH_THRESHOLD = 0.60
@@ -18,10 +18,12 @@ class MatchService:
         item_repository: ItemRepository,
         embedding_repository: ItemEmbeddingRepository,
         match_repository: MatchRepository,
+        notification_service: NotificationService,
     ):
         self.item_repository = item_repository
         self.embedding_repository = embedding_repository
         self.match_repository = match_repository
+        self.notification_service = notification_service
 
     async def find_matches(
         self,
@@ -124,6 +126,16 @@ class MatchService:
             match = await self.match_repository.create(
                 lost_item_id=lost_item_id,
                 found_item_id=found_item_id,
+                similarity_score=final_score,
+            )
+
+            lost_item = await self.item_repository.get_by_id(
+                lost_item_id
+            )
+
+            await self.notification_service.notify_match(
+                user_id=lost_item.user_id,
+                match_id=match.id,
                 similarity_score=final_score,
             )
 

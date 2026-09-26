@@ -10,6 +10,8 @@ from app.repositories.match_repository import MatchRepository
 from app.schemas.match import MatchResponse
 from app.services.match_service import MatchService
 
+from app.repositories.notification_repository import NotificationRepository
+from app.services.notification_service import NotificationService
 
 router = APIRouter(
     prefix="/matches",
@@ -20,10 +22,20 @@ router = APIRouter(
 def get_match_service(
     db: AsyncSession = Depends(get_db),
 ) -> MatchService:
+
+    notification_repository = (
+        NotificationRepository(db)
+    )
+
+    notification_service = NotificationService(
+        notification_repository
+    )
+
     return MatchService(
         item_repository=ItemRepository(db),
         embedding_repository=ItemEmbeddingRepository(db),
         match_repository=MatchRepository(db),
+        notification_service=notification_service,
     )
 
 
