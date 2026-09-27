@@ -61,6 +61,23 @@ class ItemRepository:
 
         return result.scalar_one_or_none()
 
+# get item item_id only if it belongs to user user_id
+    async def get_by_id_for_user(
+        self,
+        item_id: int,
+        user_id: int,
+    ) -> Item | None:
+        result = await self.db.execute(
+            select(Item)
+            .options(selectinload(Item.images))
+            .where(
+                Item.id == item_id,
+                Item.user_id == user_id,
+            )
+        )
+
+        return result.scalar_one_or_none()
+
     async def get_items(
         self,
         *,
@@ -94,3 +111,19 @@ class ItemRepository:
         result = await self.db.execute(query)
 
         return list(result.scalars().all())
+
+    async def get_image_for_user(
+        self,
+        object_key: str,
+        user_id: int,
+    ):
+        result = await self.db.execute(
+            select(ItemImage)
+            .join(Item, Item.id == ItemImage.item_id)
+            .where(
+                ItemImage.object_key == object_key,
+                Item.user_id == user_id,
+            )
+        )
+
+        return result.scalar_one_or_none()

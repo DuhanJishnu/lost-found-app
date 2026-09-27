@@ -10,6 +10,7 @@ from app.services.notification_service import (
     NotificationService,
 )
 
+from app.api.dependencies import get_current_user_id
 
 router = APIRouter(
     prefix="/notifications",
@@ -26,15 +27,17 @@ def get_notification_service(
 
 
 @router.get(
-    "/users/{user_id}",
+    "",
     response_model=list[NotificationResponse],
 )
 async def get_notifications(
-    user_id: int,
+    current_user_id: int = Depends(
+        get_current_user_id
+    ),
     service: NotificationService = Depends(
         get_notification_service
     ),
 ):
     return await service.get_user_notifications(
-        user_id
+        current_user_id
     )

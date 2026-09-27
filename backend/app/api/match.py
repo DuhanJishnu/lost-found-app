@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import get_current_user_id
 from app.db.database import get_db
 from app.repositories.item_embedding_repository import (
     ItemEmbeddingRepository,
@@ -45,8 +46,23 @@ def get_match_service(
 )
 async def find_matches(
     item_id: int,
+    current_user_id: int = Depends(
+        get_current_user_id
+    ),
+    db: AsyncSession = Depends(get_db),
     service: MatchService = Depends(get_match_service),
 ):
+    item = await ItemRepository(db).get_by_id_for_user(
+        item_id=item_id,
+        user_id=current_user_id,
+    )
+
+    if item is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Item not found",
+        )
+
     try:
         matches = await service.find_matches(
             item_id=item_id,

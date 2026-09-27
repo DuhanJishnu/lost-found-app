@@ -64,18 +64,24 @@ async def get_items(
 
 
 @router.get(
-    "/{item_id}",
+    "/items/{item_id}",
     response_model=ItemResponse,
 )
 async def get_item(
     item_id: int,
-    service: ItemService = Depends(get_item_service),
+    user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
 ):
-    item = await service.get_item(item_id)
+    repository = ItemRepository(db)
+
+    item = await repository.get_by_id_for_user(
+        item_id=item_id,
+        user_id=user_id,
+    )
 
     if item is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail="Item not found",
         )
 
