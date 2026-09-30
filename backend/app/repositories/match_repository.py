@@ -2,7 +2,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.match import Match, MatchStatus
-from app.models.item import ItemStatus
+from app.models.item import Item, ItemStatus
 
 
 class MatchRepository:
@@ -88,30 +88,54 @@ class MatchRepository:
 
     async def confirm_match(
         self,
-        match: Match,
-        lost_item,
-        found_item,
-    ) -> Match:
+        *,
+        match_id: int,
+        lost_item_id: int,
+        found_item_id: int,
+    ) -> Match | None:
 
-        match.status = MatchStatus.CONFIRMED
+        result = await self.db.execute(
+            update(Match)
+            .where(
+                Match.id == match_id,
+                Match.status == MatchStatus.PENDING,
+            )
+            .values(
+                status=MatchStatus.CONFIRMED,
+            )
+            .returning(Match)
+        )
 
-        lost_item.status = ItemStatus.MATCHED
-        found_item.status = ItemStatus.MATCHED
+        match = result.scalar_one_or_none()
+
+        if match is None:
+            return None
+
+        await self.db.execute(
+            update(Item)
+            .where(
+                Item.id.in_([
+                    lost_item_id,
+                    found_item_id,
+                ]),
+                Item.status == ItemStatus.ACTIVE,
+            )
+            .values(status=ItemStatus.MATCHED)
+        )
 
         await self.db.execute(
             update(Match)
             .where(
-                Match.id != match.id,
+                Match.id != match_id,
                 Match.status == MatchStatus.PENDING,
                 (
-                    (Match.lost_item_id == lost_item.id)
-                    | (Match.found_item_id == found_item.id)
+                    (Match.lost_item_id == lost_item_id)
+                    | (Match.found_item_id == found_item_id)
                 ),
             )
             .values(status=MatchStatus.REJECTED)
         )
 
         await self.db.commit()
-        await self.db.refresh(match)
 
         return match

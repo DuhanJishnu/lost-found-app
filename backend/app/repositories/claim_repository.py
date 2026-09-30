@@ -130,13 +130,25 @@ class ClaimRepository:
         self,
         claim: Claim,
         status: ClaimStatus,
-    ) -> Claim:
-        claim.status = status
+    ) -> Claim | None:
+
+        result = await self.db.execute(
+            update(Claim)
+            .where(
+                Claim.id == claim.id,
+                Claim.status == ClaimStatus.PENDING,
+            )
+            .values(status=status)
+            .returning(Claim)
+        )
+
+        updated_claim = result.scalar_one_or_none()
+
+        if updated_claim is None:
+            return None
 
         await self.db.commit()
-        await self.db.refresh(claim)
-
-        return claim
+        return updated_claim
 
     async def accept_claim(
         self,
