@@ -2,6 +2,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.match import Match, MatchStatus
+from app.models.item import ItemStatus
 
 
 class MatchRepository:
@@ -84,3 +85,33 @@ class MatchRepository:
         )
 
         await self.db.commit()
+
+    async def confirm_match(
+        self,
+        match: Match,
+        lost_item,
+        found_item,
+    ) -> Match:
+
+        match.status = MatchStatus.CONFIRMED
+
+        lost_item.status = ItemStatus.MATCHED
+        found_item.status = ItemStatus.MATCHED
+
+        await self.db.execute(
+            update(Match)
+            .where(
+                Match.id != match.id,
+                Match.status == MatchStatus.PENDING,
+                (
+                    (Match.lost_item_id == lost_item.id)
+                    | (Match.found_item_id == found_item.id)
+                ),
+            )
+            .values(status=MatchStatus.REJECTED)
+        )
+
+        await self.db.commit()
+        await self.db.refresh(match)
+
+        return match

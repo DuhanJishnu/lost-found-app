@@ -4,6 +4,7 @@ from app.models.match import Match
 from app.models.user import User
 from app.models.item_embedding import ItemEmbedding
 from app.models.notification import Notification
+from app.models.claim import Claim, ClaimStatus
 
 __all__ = [
     "User",
@@ -13,5 +14,7 @@ __all__ = [
     "ItemImage",
     "ItemEmbedding",
     "Match",
-    "Notification"
+    "Notification",
+    "Claim",
+    "ClaimStatus",
 ]
