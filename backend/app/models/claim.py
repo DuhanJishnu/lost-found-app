@@ -23,6 +23,7 @@ class Claim(Base):
     match_id: Mapped[int] = mapped_column(
         ForeignKey("matches.id"),
         nullable=False,
+        unique=True,
         index=True,
     )
 

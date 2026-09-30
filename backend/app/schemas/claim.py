@@ -8,6 +8,8 @@ from app.models.claim import ClaimStatus
 class CreateClaimRequest(BaseModel):
     match_id: int
 
+class UpdateClaimStatusRequest(BaseModel):
+    status: ClaimStatus
 
 class ClaimResponse(BaseModel):
     id: int

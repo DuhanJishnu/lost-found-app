@@ -5,10 +5,14 @@ from app.db.database import get_db
 from app.repositories.claim_repository import ClaimRepository
 from app.repositories.item_repository import ItemRepository
 from app.repositories.match_repository import MatchRepository
-from app.schemas.claim import CreateClaimRequest, ClaimResponse
 from app.services.claim_service import ClaimService
 from app.api.dependencies import get_current_user_id
 
+from app.schemas.claim import (
+    CreateClaimRequest,
+    ClaimResponse,
+    UpdateClaimStatusRequest,
+)
 
 router = APIRouter(
     prefix="/claims",
@@ -51,5 +55,67 @@ async def create_claim(
     except PermissionError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        )
+
+@router.patch(
+    "/{claim_id}/status",
+    response_model=ClaimResponse,
+)
+async def update_claim_status(
+    claim_id: int,
+    data: UpdateClaimStatusRequest,
+    current_user_id: int = Depends(get_current_user_id),
+    service: ClaimService = Depends(get_claim_service),
+):
+    try:
+        return await service.update_claim_status(
+            claim_id=claim_id,
+            user_id=current_user_id,
+            status=data.status,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        )
+
+@router.get(
+    "",
+    response_model=list[ClaimResponse],
+)
+async def get_claims(
+    current_user_id: int = Depends(get_current_user_id),
+    service: ClaimService = Depends(get_claim_service),
+):
+    return await service.get_claims_for_user(
+        current_user_id
+    )
+
+@router.get(
+    "/{claim_id}",
+    response_model=ClaimResponse,
+)
+async def get_claim(
+    claim_id: int,
+    current_user_id: int = Depends(get_current_user_id),
+    service: ClaimService = Depends(get_claim_service),
+):
+    try:
+        return await service.get_claim(
+            claim_id=claim_id,
+            user_id=current_user_id,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         )
