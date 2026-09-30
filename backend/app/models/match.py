@@ -1,10 +1,16 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, func
+from sqlalchemy import DateTime, Float, ForeignKey, func, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from enum import Enum
 
+
+class MatchStatus(str, Enum):
+    PENDING = "PENDING"
+    CONFIRMED = "CONFIRMED"
+    REJECTED = "REJECTED"
 
 class Match(Base):
     __tablename__ = "matches"
@@ -29,6 +35,13 @@ class Match(Base):
     similarity_score: Mapped[float] = mapped_column(
         Float,
         nullable=False,
+    )
+
+    status: Mapped[MatchStatus] = mapped_column(
+        SQLEnum(MatchStatus),
+        default=MatchStatus.PENDING,
+        nullable=False,
+        index=True,
     )
 
     created_at: Mapped[datetime] = mapped_column(

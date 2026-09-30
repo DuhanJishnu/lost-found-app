@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from pydantic import BaseModel
+from app.models.match import MatchStatus
 
 
 class SimilarItemResponse(BaseModel):
@@ -16,8 +17,12 @@ class MatchResponse(BaseModel):
     lost_item_id: int
     found_item_id: int
     similarity_score: float
+    status: MatchStatus
     created_at: datetime
 
     model_config = {
         "from_attributes": True
     }
+
+class UpdateMatchStatusRequest(BaseModel):
+    status: MatchStatus

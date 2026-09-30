@@ -1,7 +1,8 @@
 from app.repositories.item_embedding_repository import ItemEmbeddingRepository
 from app.repositories.item_repository import ItemRepository
 from app.repositories.match_repository import MatchRepository
-from app.models.item import ItemType
+from app.models.item import ItemType, ItemStatus
+from app.models.match import MatchStatus
 
 from app.services.matching_utils import (
     calculate_distance_km,
@@ -142,3 +143,64 @@ class MatchService:
             matches.append(match)
 
         return matches
+
+    async def update_match_status(
+        self,
+        match_id: int,
+        user_id: int,
+        status: MatchStatus,
+    ):
+        match = await self.match_repository.get_by_id(match_id)
+
+        if match is None:
+            raise ValueError("Match not found")
+
+        lost_item = await self.item_repository.get_by_id(match.lost_item_id)
+
+        if lost_item is None:
+            raise ValueError("Lost item not found")
+
+        if lost_item.user_id != user_id:
+            raise PermissionError("You do not own this match")
+
+        if match.status != MatchStatus.PENDING:
+            raise ValueError("Match has already been decided")
+
+        if status == MatchStatus.REJECTED:
+            return await self.match_repository.update_status(
+                match,
+                MatchStatus.REJECTED,
+            )
+
+        if status == MatchStatus.CONFIRMED:
+            found_item = await self.item_repository.get_by_id(
+                match.found_item_id
+            )
+
+            if found_item is None:
+                raise ValueError("Found item not found")
+
+            if (
+                lost_item.status != ItemStatus.ACTIVE
+                or found_item.status != ItemStatus.ACTIVE
+            ):
+                raise ValueError("One of the items is no longer available")
+
+            # Confirm the match
+            match.status = MatchStatus.CONFIRMED
+
+            # Mark both items as matched
+            lost_item.status = ItemStatus.MATCHED
+            found_item.status = ItemStatus.MATCHED
+
+            await self.match_repository.reject_other_matches(
+                lost_item_id=lost_item.id,
+                found_item_id=found_item.id,
+                confirmed_match_id=match.id,
+            )
+
+            await self.match_repository.db.commit()
+
+            await self.match_repository.db.refresh(match)
+
+            return match

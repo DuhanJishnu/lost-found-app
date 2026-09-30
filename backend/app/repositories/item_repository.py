@@ -127,3 +127,9 @@ class ItemRepository:
         )
 
         return result.scalar_one_or_none()
+
+    async def update_status(self, item: Item, status: ItemStatus) -> Item:
+        item.status = status
+        await self.db.commit()
+        await self.db.refresh(item)
+        return item
