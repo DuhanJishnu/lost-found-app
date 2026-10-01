@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
 from app.repositories.notification_repository import (
     NotificationRepository,
 )
-from app.schemas.notification import NotificationResponse
+from app.schemas.notification import NotificationResponse, UnreadNotificationCountResponse
 from app.services.notification_service import (
     NotificationService,
 )
@@ -41,3 +41,40 @@ async def get_notifications(
     return await service.get_user_notifications(
         current_user_id
     )
+
+@router.get(
+    "/unread-count",
+    response_model=UnreadNotificationCountResponse,
+)
+async def get_unread_count(
+    current_user_id: int = Depends(get_current_user_id),
+    service: NotificationService = Depends(get_notification_service),
+):
+    count = await service.get_unread_count(
+        current_user_id
+    )
+
+    return UnreadNotificationCountResponse(
+        count=count
+    )
+
+@router.patch(
+    "/{notification_id}/read",
+    response_model=NotificationResponse,
+)
+async def mark_notification_as_read(
+    notification_id: int,
+    current_user_id: int = Depends(get_current_user_id),
+    service: NotificationService = Depends(get_notification_service),
+):
+    try:
+        return await service.mark_as_read(
+            notification_id=notification_id,
+            user_id=current_user_id,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        )

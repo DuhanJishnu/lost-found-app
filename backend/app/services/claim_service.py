@@ -3,7 +3,7 @@ from app.models.match import MatchStatus
 from app.repositories.claim_repository import ClaimRepository
 from app.repositories.item_repository import ItemRepository
 from app.repositories.match_repository import MatchRepository
-
+from app.services.notification_service import NotificationService
 
 class ClaimService:
     def __init__(
@@ -11,10 +11,12 @@ class ClaimService:
         claim_repository: ClaimRepository,
         match_repository: MatchRepository,
         item_repository: ItemRepository,
+        notification_service: NotificationService
     ):
         self.claim_repository = claim_repository
         self.match_repository = match_repository
         self.item_repository = item_repository
+        self.notification_service = notification_service
 
     async def create_claim(
         self,
@@ -60,10 +62,28 @@ class ClaimService:
             )
 
         # 6. Create the claim
-        return await self.claim_repository.create(
+        claim = await self.claim_repository.create(
             match_id=match_id,
             claimant_id=claimant_id,
         )
+
+        # 7. Get the found item
+        found_item = await self.item_repository.get_by_id(
+            match.found_item_id
+        )
+
+        if found_item is None:
+            raise ValueError("Found item not found")
+
+        # 8. Notify the finder
+        await self.notification_service.notify_claim_created(
+            user_id=found_item.user_id,
+            match_id=match.id,
+            claim_id=claim.id,
+        )
+
+        # 9. Return the created claim
+        return claim
 
     async def update_claim_status(
         self,
@@ -73,14 +93,17 @@ class ClaimService:
         status: ClaimStatus,
     ) -> Claim:
 
+        # 1. Get the claim
         claim = await self.claim_repository.get_by_id(claim_id)
 
         if claim is None:
             raise ValueError("Claim not found")
 
+        # 2. Claim must still be pending
         if claim.status != ClaimStatus.PENDING:
             raise ValueError("Claim has already been decided")
 
+        # 3. Get the match
         match = await self.match_repository.get_by_id(
             claim.match_id
         )
@@ -88,11 +111,13 @@ class ClaimService:
         if match is None:
             raise ValueError("Match not found")
 
+        # 4. Match must be confirmed
         if match.status != MatchStatus.CONFIRMED:
             raise ValueError(
                 "Claim can only be decided for a confirmed match"
             )
 
+        # 5. Get the found item
         found_item = await self.item_repository.get_by_id(
             match.found_item_id
         )
@@ -100,26 +125,47 @@ class ClaimService:
         if found_item is None:
             raise ValueError("Found item not found")
 
-        # The finder owns the FOUND item.
+        # 6. Only the finder can accept or reject the claim
         if found_item.user_id != user_id:
             raise PermissionError(
                 "Only the finder can accept or reject this claim"
             )
 
+        # 7. Reject claim
         if status == ClaimStatus.REJECTED:
-            return await self.claim_repository.reject_claim(
+            updated_claim = await self.claim_repository.reject_claim(
                 claim=claim,
                 lost_item_id=match.lost_item_id,
                 found_item_id=match.found_item_id,
             )
 
+            # Notify the claimant
+            await self.notification_service.notify_claim_rejected(
+                user_id=claim.claimant_id,
+                match_id=match.id,
+                claim_id=claim.id,
+            )
+
+            return updated_claim
+
+        # 8. Accept claim
         if status == ClaimStatus.ACCEPTED:
-            return await self.claim_repository.accept_claim(
+            updated_claim = await self.claim_repository.accept_claim(
                 claim=claim,
                 lost_item_id=match.lost_item_id,
                 found_item_id=match.found_item_id,
             )
 
+            # Notify the claimant
+            await self.notification_service.notify_claim_accepted(
+                user_id=claim.claimant_id,
+                match_id=match.id,
+                claim_id=claim.id,
+            )
+
+            return updated_claim
+
+        # 9. Invalid status
         raise ValueError("Invalid claim status")
 
     async def get_claims_for_user(

@@ -8,6 +8,9 @@ from app.repositories.match_repository import MatchRepository
 from app.services.claim_service import ClaimService
 from app.api.dependencies import get_current_user_id
 
+from app.repositories.notification_repository import NotificationRepository
+from app.services.notification_service import NotificationService
+
 from app.schemas.claim import (
     CreateClaimRequest,
     ClaimResponse,
@@ -23,10 +26,22 @@ router = APIRouter(
 def get_claim_service(
     db: AsyncSession = Depends(get_db),
 ) -> ClaimService:
+
+    claim_repository = ClaimRepository(db)
+    match_repository = MatchRepository(db)
+    item_repository = ItemRepository(db)
+
+    notification_repository = NotificationRepository(db)
+
+    notification_service = NotificationService(
+        notification_repository
+    )
+
     return ClaimService(
-        claim_repository=ClaimRepository(db),
-        match_repository=MatchRepository(db),
-        item_repository=ItemRepository(db),
+        claim_repository=claim_repository,
+        match_repository=match_repository,
+        item_repository=item_repository,
+        notification_service=notification_service,
     )
 
 
