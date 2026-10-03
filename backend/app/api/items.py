@@ -6,8 +6,14 @@ from app.db.database import get_db
 from app.models.item import ItemStatus, ItemType
 from app.repositories.item_repository import ItemRepository
 from app.schemas.item import CreateItemRequest, ItemResponse
+from app.schemas.found_feed import FoundItemDetailResponse
 from app.services.item_service import ItemService
 from app.services.job_queue import enqueue_item_processing
+from app.services.found_feed_service import (
+    FoundFeedService,
+    FoundFeedItemResponse,
+    LostItemRequiredError,
+)
 
 router = APIRouter(
     prefix="/items",
@@ -62,9 +68,39 @@ async def get_items(
         offset=offset,
     )
 
+@router.get("/me", response_model=list[ItemResponse])
+async def get_my_items(
+    user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    repository = ItemRepository(db)
+
+    return await repository.get_for_user(user_id)
+
+@router.get("/found", response_model=list[ItemResponse])
+async def get_found_items(
+    user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    repository = ItemRepository(db)
+
+    return await repository.get_active_found_items(user_id)
 
 @router.get(
-    "/items/{item_id}",
+    "/found/feed",
+    response_model=list[FoundFeedItemResponse],
+)
+async def get_found_feed(
+    user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    service = FoundFeedService(db)
+
+    return await service.get_feed(user_id)
+
+
+@router.get(
+    "/{item_id}",
     response_model=ItemResponse,
 )
 async def get_item(
@@ -86,3 +122,38 @@ async def get_item(
         )
 
     return item
+
+
+@router.get(
+    "/found/{item_id}",
+    response_model=FoundItemDetailResponse,
+)
+async def get_found_item_detail(
+    item_id: int,
+    user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    service = FoundFeedService(db)
+
+    try:
+        result = await service.get_item_detail(
+            item_id=item_id,
+            user_id=user_id,
+        )
+    except LostItemRequiredError:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "LOST_ITEM_REQUIRED",
+                "message": "Register your lost item first to claim a relevant found item.",
+            },
+        )
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Found item not available",
+        )
+
+    return result
+

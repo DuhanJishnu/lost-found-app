@@ -133,3 +133,45 @@ class ItemRepository:
         await self.db.commit()
         await self.db.refresh(item)
         return item
+
+    async def get_for_user(self, user_id: int) -> list[Item]:
+        result = await self.db.execute(
+            select(Item)
+            .options(selectinload(Item.images))
+            .where(Item.user_id == user_id)
+            .order_by(Item.created_at.desc())
+        )
+
+        return list(result.scalars().all())
+
+    async def get_active_found_items(
+        self,
+        user_id: int,
+    ) -> list[Item]:
+        result = await self.db.execute(
+            select(Item)
+            .options(selectinload(Item.images))
+            .where(
+                Item.type == ItemType.FOUND,
+                Item.status == ItemStatus.ACTIVE,
+                Item.user_id != user_id,
+            )
+            .order_by(Item.created_at.desc())
+        )
+
+        return list(result.scalars().all())
+
+    async def get_active_lost_items_for_user(
+        self,
+        user_id: int,
+    ) -> list[Item]:
+        result = await self.db.execute(
+            select(Item)
+            .where(
+                Item.user_id == user_id,
+                Item.type == ItemType.LOST,
+                Item.status == ItemStatus.ACTIVE,
+            )
+        )
+
+        return list(result.scalars().all())

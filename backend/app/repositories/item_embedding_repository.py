@@ -1,5 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.item import Item, ItemStatus, ItemType
 from app.models.item_embedding import ItemEmbedding
@@ -62,3 +63,45 @@ class ItemEmbeddingRepository:
         )
 
         return result.all()
+
+    async def get_active_found_embeddings(
+        self,
+        user_id: int,
+    ):
+        result = await self.db.execute(
+            select(ItemEmbedding)
+            .join(Item, Item.id == ItemEmbedding.item_id)
+            .where(
+                Item.type == ItemType.FOUND,
+                Item.status == ItemStatus.ACTIVE,
+                Item.user_id != user_id,
+            )
+            .options(
+                selectinload(ItemEmbedding.item)
+                .selectinload(Item.images)
+            )
+        )
+
+        return list(result.scalars().all())
+
+    async def get_found_embedding_for_user(
+        self,
+        item_id: int,
+        user_id: int,
+    ):
+        result = await self.db.execute(
+            select(ItemEmbedding)
+            .join(Item, Item.id == ItemEmbedding.item_id)
+            .where(
+                Item.id == item_id,
+                Item.type == ItemType.FOUND,
+                Item.status == ItemStatus.ACTIVE,
+                Item.user_id != user_id,
+            )
+            .options(
+                selectinload(ItemEmbedding.item)
+                .selectinload(Item.images)
+            )
+        )
+
+        return result.scalar_one_or_none()
