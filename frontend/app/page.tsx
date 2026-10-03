@@ -2,6 +2,8 @@ import { SignInButton } from "@/components/auth/sign-in-button";
 import { backendFetch } from "@/lib/backend";
 import { Button } from "@/components/ui/button";
 import { DashboardButton } from "@/components/DashboardButton";
+import { FoundItemButton } from "@/components/FoundItemButton";
+
 
 export default async function Home() {
   const response = await backendFetch("/auth/me");
@@ -26,6 +28,9 @@ export default async function Home() {
         </div>
         <div className="p-3">
          <DashboardButton />
+        </div>
+        <div className="p-3">
+         <FoundItemButton />
         </div>
       </div>
     </main>
