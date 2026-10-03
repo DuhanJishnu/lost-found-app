@@ -2,10 +2,7 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 from app.schemas.item_image import ItemImageResponse
-
-class ItemType(str, Enum):
-    LOST = "LOST"
-    FOUND = "FOUND"
+from app.models.item import ItemStatus, ItemType
 
 class CreateItemRequest(BaseModel):
     type: ItemType
@@ -38,6 +35,7 @@ class ItemResponse(BaseModel):
     title: str
     description: str
     category: str
+    status: ItemStatus
     latitude: float | None
     longitude: float | None
     images: list[ItemImageResponse] = Field(

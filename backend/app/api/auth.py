@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_db
 from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
+from app.api.dependencies import get_current_user_id
 
 from fastapi import Depends
 
@@ -77,3 +78,9 @@ async def authenticate_google_user(
             "email": user.email,
         },
     }
+
+@router.get("/me")
+async def get_current_user(
+    user_id: int = Depends(get_current_user_id),
+):
+    return {"user_id": user_id}
