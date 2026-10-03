@@ -1,9 +1,17 @@
+from fastapi import HTTPException
+
 from app.models.claim import Claim, ClaimStatus
+from app.models.item import ItemStatus, ItemType
 from app.models.match import MatchStatus
 from app.repositories.claim_repository import ClaimRepository
+from app.repositories.item_embedding_repository import ItemEmbeddingRepository
 from app.repositories.item_repository import ItemRepository
 from app.repositories.match_repository import MatchRepository
+from app.schemas.claim import ClaimVerificationResponse
 from app.services.notification_service import NotificationService
+from app.services.similarity_service import SimilarityService
+
+CLAIM_SIMILARITY_THRESHOLD = 0.40
 
 class ClaimService:
     def __init__(
@@ -11,12 +19,103 @@ class ClaimService:
         claim_repository: ClaimRepository,
         match_repository: MatchRepository,
         item_repository: ItemRepository,
+        embedding_repository: ItemEmbeddingRepository,
         notification_service: NotificationService
     ):
         self.claim_repository = claim_repository
         self.match_repository = match_repository
         self.item_repository = item_repository
+        self.embedding_repository = embedding_repository
         self.notification_service = notification_service
+
+    async def verify_claim_pair(
+        self,
+        *,
+        user_id: int,
+        lost_item_id: int,
+        found_item_id: int,
+    ) -> ClaimVerificationResponse:
+        lost_item = await self.item_repository.get_by_id_for_user(
+            lost_item_id,
+            user_id,
+        )
+
+        if lost_item is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Lost item not found",
+            )
+
+        if lost_item.type != ItemType.LOST:
+            raise HTTPException(
+                status_code=400,
+                detail="Selected item is not a lost item",
+            )
+
+        if lost_item.status != ItemStatus.ACTIVE:
+            raise HTTPException(
+                status_code=400,
+                detail="Lost item is no longer active",
+            )
+
+        found_item = await self.item_repository.get_by_id(found_item_id)
+
+        if found_item is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Found item not found",
+            )
+
+        if found_item.type != ItemType.FOUND:
+            raise HTTPException(
+                status_code=400,
+                detail="Selected item is not a found item",
+            )
+
+        if found_item.status != ItemStatus.ACTIVE:
+            raise HTTPException(
+                status_code=400,
+                detail="Found item is no longer available",
+            )
+
+        if found_item.user_id == user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="You cannot claim your own item",
+            )
+
+        lost_embedding = await self.embedding_repository.get_by_item_id(
+            lost_item_id
+        )
+        found_embedding = await self.embedding_repository.get_by_item_id(
+            found_item_id
+        )
+
+        if not lost_embedding or not found_embedding:
+            raise HTTPException(
+                status_code=409,
+                detail="Item matching is not ready yet",
+            )
+
+        similarity = SimilarityService.cosine_similarity(
+            lost_embedding.embedding,
+            found_embedding.embedding,
+        )
+
+        if similarity <= CLAIM_SIMILARITY_THRESHOLD:
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "This item is not sufficiently relevant to your lost item"
+                ),
+            )
+
+        return ClaimVerificationResponse(
+            valid=True,
+            found_item_id=found_item_id,
+            lost_item_id=lost_item_id,
+            similarity_score=similarity,
+        )
 
     async def create_claim(
         self,

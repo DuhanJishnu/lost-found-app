@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
 from app.repositories.claim_repository import ClaimRepository
+from app.repositories.item_embedding_repository import ItemEmbeddingRepository
 from app.repositories.item_repository import ItemRepository
 from app.repositories.match_repository import MatchRepository
 from app.services.claim_service import ClaimService
@@ -12,9 +13,11 @@ from app.repositories.notification_repository import NotificationRepository
 from app.services.notification_service import NotificationService
 
 from app.schemas.claim import (
+    ClaimVerificationResponse,
     CreateClaimRequest,
     ClaimResponse,
     UpdateClaimStatusRequest,
+    VerifyClaimRequest,
 )
 
 router = APIRouter(
@@ -30,6 +33,7 @@ def get_claim_service(
     claim_repository = ClaimRepository(db)
     match_repository = MatchRepository(db)
     item_repository = ItemRepository(db)
+    embedding_repository = ItemEmbeddingRepository(db)
 
     notification_repository = NotificationRepository(db)
 
@@ -41,7 +45,24 @@ def get_claim_service(
         claim_repository=claim_repository,
         match_repository=match_repository,
         item_repository=item_repository,
+        embedding_repository=embedding_repository,
         notification_service=notification_service,
+    )
+
+
+@router.post(
+    "/verify",
+    response_model=ClaimVerificationResponse,
+)
+async def verify_claim(
+    data: VerifyClaimRequest,
+    user_id: int = Depends(get_current_user_id),
+    service: ClaimService = Depends(get_claim_service),
+):
+    return await service.verify_claim_pair(
+        user_id=user_id,
+        lost_item_id=data.lost_item_id,
+        found_item_id=data.found_item_id,
     )
 
 

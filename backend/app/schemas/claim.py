@@ -1,12 +1,25 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.claim import ClaimStatus
 
 
 class CreateClaimRequest(BaseModel):
     match_id: int
+
+
+class VerifyClaimRequest(BaseModel):
+    lost_item_id: int = Field(gt=0)
+    found_item_id: int = Field(gt=0)
+
+
+class ClaimVerificationResponse(BaseModel):
+    valid: bool
+    found_item_id: int
+    lost_item_id: int
+    similarity_score: float
+
 
 class UpdateClaimStatusRequest(BaseModel):
     status: ClaimStatus
