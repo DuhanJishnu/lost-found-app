@@ -1,23 +1,11 @@
 import { Badge } from "@/components/ui/badge";
 
-import { ItemType } from "@/types/item";
+import { ItemType } from "@/types/items";
 
-interface ItemTypeBadgeProps {
-  type: ItemType;
-}
-
-export function ItemTypeBadge({
-  type,
-}: ItemTypeBadgeProps) {
+export function ItemTypeBadge({ type }: { type: ItemType }) {
   return (
-    <Badge
-      variant={
-        type === "LOST"
-          ? "default"
-          : "secondary"
-      }
-    >
-      {type}
+    <Badge variant={type === "LOST" ? "default" : "secondary"} className="capitalize">
+      {type.toLowerCase()}
     </Badge>
   );
 }

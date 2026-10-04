@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
-
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/link-button";
 
 export default function Error({
   error,
@@ -25,11 +23,9 @@ export default function Error({
             register the item you lost.
           </p>
 
-          <Button asChild className="mt-6">
-            <Link href="/items/new">
-              Register Lost Item
-            </Link>
-          </Button>
+          <LinkButton href="/items/new" className="mt-6">
+            Register Lost Item
+          </LinkButton>
         </div>
       </main>
     );
@@ -46,11 +42,9 @@ export default function Error({
           This item may no longer be available.
         </p>
 
-        <Button asChild variant="outline" className="mt-6">
-          <Link href="/found">
-            Back to Found Items
-          </Link>
-        </Button>
+        <LinkButton href="/found" variant="outline" className="mt-6">
+          Back to Found Items
+        </LinkButton>
       </div>
     </main>
   );

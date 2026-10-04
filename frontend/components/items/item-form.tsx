@@ -11,13 +11,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FormError } from "@/components/ui/form-error";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
 
+import { ItemType } from "@/types/items";
 import { ImageUploader } from "./image-uploader";
-import { ItemType } from "@/types/item";
+import { ItemTypeToggle } from "./item-type-toggle";
 
 export function ItemForm() {
   const router = useRouter();
@@ -33,9 +35,7 @@ export function ItemForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleSubmit(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setLoading(true);
@@ -44,9 +44,7 @@ export function ItemForm() {
     try {
       const response = await fetch("/api/items", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type,
           title,
@@ -59,119 +57,64 @@ export function ItemForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.error ?? "Failed to create item",
-        );
+        throw new Error(data.error ?? "Failed to create item");
       }
 
       router.push("/dashboard");
       router.refresh();
     } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Something went wrong",
-      );
+      setError(error instanceof Error ? error.message : "Something went wrong");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <Card>
+    <Card className="p-2 sm:p-4">
       <CardHeader>
-        <CardTitle className="text-2xl">
-          Report an Item
-        </CardTitle>
+        <CardTitle className="font-display text-3xl">Report an item</CardTitle>
 
         <CardDescription>
-          Report something you've lost or found.
+          Tell us what you lost or found. The more detail, the better the match.
         </CardDescription>
       </CardHeader>
 
       <CardContent>
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-6"
-        >
-          <div className="space-y-3">
-            <Label>What happened?</Label>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <FormField label="What happened?">
+            <ItemTypeToggle value={type} onChange={setType} />
+          </FormField>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                type="button"
-                variant={
-                  type === "LOST"
-                    ? "default"
-                    : "outline"
-                }
-                onClick={() => setType("LOST")}
-              >
-                I Lost Something
-              </Button>
-
-              <Button
-                type="button"
-                variant={
-                  type === "FOUND"
-                    ? "default"
-                    : "outline"
-                }
-                onClick={() => setType("FOUND")}
-              >
-                I Found Something
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="title">
-              Item title
-            </Label>
-
+          <FormField label="Item title" htmlFor="title">
             <Input
               id="title"
               value={title}
-              onChange={(event) =>
-                setTitle(event.target.value)
-              }
+              onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Black iPhone 15"
               required
             />
-          </div>
+          </FormField>
 
-          <div className="space-y-2">
-            <Label htmlFor="category">
-              Category
-            </Label>
-
+          <FormField label="Category" htmlFor="category">
             <Input
               id="category"
               value={category}
-              onChange={(event) =>
-                setCategory(event.target.value)
-              }
+              onChange={(e) => setCategory(e.target.value)}
               placeholder="e.g. Electronics"
               required
             />
-          </div>
+          </FormField>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">
-              Description
-            </Label>
-
+          <FormField label="Description" htmlFor="description">
             <Textarea
               id="description"
               value={description}
-              onChange={(event) =>
-                setDescription(event.target.value)
-              }
-              placeholder="Describe the item in detail..."
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Colour, brand, marks, where and when…"
               className="min-h-32"
               required
             />
-          </div>
+          </FormField>
 
           <ImageUploader
             previewUrl={imagePreview}
@@ -185,24 +128,16 @@ export function ItemForm() {
             }}
           />
 
-          {error && (
-            <p className="text-sm text-destructive">
-              {error}
-            </p>
-          )}
+          <FormError message={error} />
 
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={loading}
-          >
+          <Button type="submit" className="w-full" disabled={loading}>
             {loading ? (
               <>
                 <Spinner />
-                Reporting...
+                Submitting…
               </>
             ) : (
-              "Report Item"
+              "Submit report"
             )}
           </Button>
         </form>

@@ -1,9 +1,7 @@
-import Link from "next/link";
-
 import { getMyLostItems } from "@/lib/items";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/link-button";
 import {
   Card,
   CardContent,
@@ -48,11 +46,9 @@ export default async function ClaimPage({
               you can start a claim.
             </p>
 
-            <Button asChild className="mt-6">
-              <Link href="/items/new">
-                Register Lost Item
-              </Link>
-            </Button>
+            <LinkButton href="/items/new" className="mt-6">
+              Register Lost Item
+            </LinkButton>
           </CardContent>
         </Card>
       ) : (
@@ -78,16 +74,12 @@ export default async function ClaimPage({
                   {item.description}
                 </p>
 
-                <Button
-                  asChild
+                <LinkButton
+                  href={`/found/${itemId}/claim/verify?lostItemId=${item.id}`}
                   className="mt-4 w-full"
                 >
-                  <Link
-                    href={`/found/${itemId}/claim/verify?lostItemId=${item.id}`}
-                  >
-                    Select This Item
-                  </Link>
-                </Button>
+                  Select This Item
+                </LinkButton>
               </CardContent>
             </Card>
           ))}

@@ -1,42 +1,35 @@
 import { getFoundFeed } from "@/lib/found";
+
+import { EmptyState } from "@/components/layout/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
+import { PageShell } from "@/components/layout/page-shell";
+import { LinkButton } from "@/components/ui/link-button";
 import { FoundItemCard } from "@/components/items/found-item-card";
+import { ItemGrid } from "@/components/items/item-grid";
 
 export default async function FoundPage() {
   const items = await getFoundFeed();
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">
-          Found Items
-        </h1>
-
-        <p className="mt-2 text-muted-foreground">
-          Browse items found by other people that may match
-          something you lost.
-        </p>
-      </div>
+    <PageShell width="xl">
+      <PageHeader
+        title="Found items"
+        description="Items other people have found that may match something you lost."
+      />
 
       {items.length === 0 ? (
-        <div className="rounded-lg border p-8 text-center">
-          <p className="font-medium">
-            No found items available yet.
-          </p>
-
-          <p className="mt-2 text-sm text-muted-foreground">
-            Register a lost item to discover relevant found items.
-          </p>
-        </div>
+        <EmptyState
+          title="No found items yet"
+          description="Report a lost item and matching found items will show up here."
+          action={<LinkButton href="/items/new">Report lost item</LinkButton>}
+        />
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <ItemGrid columns="three">
           {items.map((item) => (
-            <FoundItemCard
-              key={item.id}
-              item={item}
-            />
+            <FoundItemCard key={item.id} item={item} />
           ))}
-        </div>
+        </ItemGrid>
       )}
-    </main>
+    </PageShell>
   );
 }

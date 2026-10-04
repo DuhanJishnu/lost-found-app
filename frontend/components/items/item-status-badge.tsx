@@ -1,17 +1,11 @@
 import { Badge } from "@/components/ui/badge";
 
-import { ItemStatus } from "@/types/item";
+import { ItemStatus } from "@/types/items";
 
-interface ItemStatusBadgeProps {
-  status: ItemStatus;
-}
-
-export function ItemStatusBadge({
-  status,
-}: ItemStatusBadgeProps) {
+export function ItemStatusBadge({ status }: { status: ItemStatus }) {
   return (
-    <Badge variant="outline">
-      {status}
+    <Badge variant="outline" className="capitalize">
+      {status.toLowerCase()}
     </Badge>
   );
 }

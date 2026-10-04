@@ -1,5 +1,5 @@
 import { backendFetch } from "@/lib/backend";
-import { Item } from "@/types/item";
+import { Item } from "@/types/items";
 
 export async function getMyItems(): Promise<Item[]> {
   const response = await backendFetch("/items");

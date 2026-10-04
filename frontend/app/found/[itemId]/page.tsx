@@ -1,10 +1,9 @@
 import Image from "next/image";
-import Link from "next/link";
 
 import { getFoundItem } from "@/lib/found";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/link-button";
 import {
   Card,
   CardContent,
@@ -67,11 +66,9 @@ export default async function FoundItemPage({
           </p>
 
           {item.can_claim ? (
-            <Button className="mt-6 w-full" asChild>
-              <Link href={`/found/${item.id}/claim`}>
-                Claim This Item
-              </Link>
-            </Button>
+            <LinkButton href={`/found/${item.id}/claim`} className="mt-6 w-full">
+              Claim This Item
+            </LinkButton>
           ) : (
             <div className="mt-6 rounded-lg border p-4 text-sm text-muted-foreground">
               This item does not currently have enough similarity
