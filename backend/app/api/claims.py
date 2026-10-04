@@ -14,8 +14,8 @@ from app.services.notification_service import NotificationService
 
 from app.schemas.claim import (
     ClaimVerificationResponse,
-    CreateClaimRequest,
     ClaimResponse,
+    StartClaimRequest,
     UpdateClaimStatusRequest,
     VerifyClaimRequest,
 )
@@ -42,6 +42,7 @@ def get_claim_service(
     )
 
     return ClaimService(
+        db=db,
         claim_repository=claim_repository,
         match_repository=match_repository,
         item_repository=item_repository,
@@ -67,32 +68,20 @@ async def verify_claim(
 
 
 @router.post(
-    "",
+    "/",
     response_model=ClaimResponse,
-    status_code=status.HTTP_201_CREATED,
+    status_code=201,
 )
 async def create_claim(
-    data: CreateClaimRequest,
-    current_user_id: int = Depends(get_current_user_id),
+    data: StartClaimRequest,
+    user_id: int = Depends(get_current_user_id),
     service: ClaimService = Depends(get_claim_service),
 ):
-    try:
-        return await service.create_claim(
-            match_id=data.match_id,
-            claimant_id=current_user_id,
-        )
-
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        )
-
-    except PermissionError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc),
-        )
+    return await service.create_manual_claim(
+        user_id=user_id,
+        lost_item_id=data.lost_item_id,
+        found_item_id=data.found_item_id,
+    )
 
 @router.patch(
     "/{claim_id}/status",
@@ -112,9 +101,20 @@ async def update_claim_status(
         )
 
     except ValueError as exc:
+        detail = str(exc)
+        if "not found" in detail.lower():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=detail,
+            )
+        if "already been decided" in detail.lower():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=detail,
+            )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
+            detail=detail,
         )
 
     except PermissionError as exc:

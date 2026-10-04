@@ -33,3 +33,7 @@ class ClaimResponse(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+class StartClaimRequest(BaseModel):
+    lost_item_id: int = Field(gt=0)
+    found_item_id: int = Field(gt=0)

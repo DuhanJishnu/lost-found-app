@@ -77,15 +77,9 @@ async def get_my_items(
 
     return await repository.get_for_user(user_id)
 
-@router.get("/found", response_model=list[ItemResponse])
-async def get_found_items(
-    user_id: int = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db),
-):
-    repository = ItemRepository(db)
 
-    return await repository.get_active_found_items(user_id)
-
+# NOTE: /found/feed and /found/{item_id} MUST be registered before
+# the wildcard /{item_id} route — FastAPI matches routes in order.
 @router.get(
     "/found/feed",
     response_model=list[FoundFeedItemResponse],
@@ -97,31 +91,6 @@ async def get_found_feed(
     service = FoundFeedService(db)
 
     return await service.get_feed(user_id)
-
-
-@router.get(
-    "/{item_id}",
-    response_model=ItemResponse,
-)
-async def get_item(
-    item_id: int,
-    user_id: int = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db),
-):
-    repository = ItemRepository(db)
-
-    item = await repository.get_by_id_for_user(
-        item_id=item_id,
-        user_id=user_id,
-    )
-
-    if item is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Item not found",
-        )
-
-    return item
 
 
 @router.get(
@@ -156,4 +125,29 @@ async def get_found_item_detail(
         )
 
     return result
+
+
+@router.get(
+    "/{item_id}",
+    response_model=ItemResponse,
+)
+async def get_item(
+    item_id: int,
+    user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    repository = ItemRepository(db)
+
+    item = await repository.get_by_id_for_user(
+        item_id=item_id,
+        user_id=user_id,
+    )
+
+    if item is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Item not found",
+        )
+
+    return item
 

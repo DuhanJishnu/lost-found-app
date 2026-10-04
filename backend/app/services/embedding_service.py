@@ -1,3 +1,5 @@
+import asyncio
+
 from google import genai
 from google.genai import types
 
@@ -23,7 +25,10 @@ class EmbeddingService:
         mime_type: str,
     ) -> list[float]:
 
-        result = self.client.models.embed_content(
+        # The Gemini Python SDK is synchronous — run it in a thread pool
+        # so the async event loop is not blocked during embedding generation.
+        result = await asyncio.to_thread(
+            self.client.models.embed_content,
             model=self.model,
             contents=[
                 description,
@@ -32,9 +37,9 @@ class EmbeddingService:
                     mime_type=mime_type,
                 ),
             ],
-             config=types.EmbedContentConfig(
+            config=types.EmbedContentConfig(
                 output_dimensionality=768
-            )
+            ),
         )
 
         return result.embeddings[0].values
