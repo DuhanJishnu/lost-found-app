@@ -1,10 +1,10 @@
 from datetime import datetime
+from enum import Enum
 
-from sqlalchemy import DateTime, Float, ForeignKey, func, Enum as SQLEnum
+from sqlalchemy import DateTime, Float, ForeignKey, UniqueConstraint, func, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
-from enum import Enum
 
 
 class MatchStatus(str, Enum):
@@ -14,6 +14,9 @@ class MatchStatus(str, Enum):
 
 class Match(Base):
     __tablename__ = "matches"
+    __table_args__ = (
+        UniqueConstraint("lost_item_id", "found_item_id", name="uq_matches_lost_found"),
+    )
 
     id: Mapped[int] = mapped_column(
         primary_key=True,

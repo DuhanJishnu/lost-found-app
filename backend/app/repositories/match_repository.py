@@ -11,19 +11,21 @@ class MatchRepository:
 
     async def create(
         self,
+        *,
         lost_item_id: int,
         found_item_id: int,
         similarity_score: float,
-    ):
+    ) -> Match:
         match = Match(
             lost_item_id=lost_item_id,
             found_item_id=found_item_id,
             similarity_score=similarity_score,
+            status=MatchStatus.PENDING,
         )
 
         self.db.add(match)
-        await self.db.commit()
-        await self.db.refresh(match)
+
+        await self.db.flush()
 
         return match
 
@@ -55,15 +57,28 @@ class MatchRepository:
 
     async def update_status(
         self,
-        match: Match,
+        match_id: int,
         status: MatchStatus,
-    ):
-        match.status = status
+    ) -> Match | None:
+        result = await self.db.execute(
+            update(Match)
+            .where(
+                Match.id == match_id,
+                Match.status == MatchStatus.PENDING,
+            )
+            .values(status=status)
+            .returning(Match)
+        )
+
+        updated_match = result.scalar_one_or_none()
+        if updated_match is None:
+            return None
 
         await self.db.commit()
-        await self.db.refresh(match)
+        await self.db.refresh(updated_match)
 
-        return match
+        return updated_match
+
 
     async def reject_other_matches(
         self,

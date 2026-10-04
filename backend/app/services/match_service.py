@@ -170,10 +170,13 @@ class MatchService:
                 raise ValueError("Match has already been decided")
 
             if status == MatchStatus.REJECTED:
-                return await self.match_repository.update_status(
-                    match,
-                    MatchStatus.REJECTED,
+                rejected = await self.match_repository.update_status(
+                    match_id=match.id,
+                    status=MatchStatus.REJECTED,
                 )
+                if rejected is None:
+                    raise ValueError("Match has already been decided")
+                return rejected
 
             if status == MatchStatus.CONFIRMED:
                 found_item = await self.item_repository.get_by_id(
@@ -191,9 +194,12 @@ class MatchService:
                         "One of the items is no longer available"
                     )
 
-                return await self.match_repository.confirm_match(
-                    match=match,
-                    lost_item=lost_item,
-                    found_item=found_item,
+                confirmed = await self.match_repository.confirm_match(
+                    match_id=match.id,
+                    lost_item_id=lost_item.id,
+                    found_item_id=found_item.id,
                 )
+                if confirmed is None:
+                    raise ValueError("Match has already been decided")
+                return confirmed
             raise ValueError("Invalid match status")

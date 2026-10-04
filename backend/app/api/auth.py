@@ -24,20 +24,6 @@ class GoogleUserRequest(BaseModel):
     name: str
     email: str
 
-@router.post("/dev-token/{user_id}")
-async def create_dev_token(
-    user_id: int,
-):
-    auth_service = AuthService()
-
-    token = auth_service.create_api_token(
-        user_id
-    )
-
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-    }
 
 @router.post("/google")
 async def authenticate_google_user(

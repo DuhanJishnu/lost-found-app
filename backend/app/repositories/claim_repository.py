@@ -4,7 +4,7 @@ from sqlalchemy.orm import aliased
 
 from app.models.claim import Claim, ClaimStatus
 from app.models.item import Item, ItemStatus
-from app.models.match import Match
+from app.models.match import Match, MatchStatus
 
 class ClaimRepository:
     def __init__(self, db: AsyncSession):
@@ -24,8 +24,7 @@ class ClaimRepository:
 
         self.db.add(claim)
 
-        await self.db.commit()
-        await self.db.refresh(claim)
+        await self.db.flush()
 
         return claim
 
@@ -128,14 +127,14 @@ class ClaimRepository:
 
     async def update_status(
         self,
-        claim: Claim,
+        claim_id: int,
         status: ClaimStatus,
     ) -> Claim | None:
 
         result = await self.db.execute(
             update(Claim)
             .where(
-                Claim.id == claim.id,
+                Claim.id == claim_id,
                 Claim.status == ClaimStatus.PENDING,
             )
             .values(status=status)
@@ -153,13 +152,38 @@ class ClaimRepository:
     async def accept_claim(
         self,
         *,
-        claim: Claim,
+        claim_id: int,
+        match_id: int,
         lost_item_id: int,
         found_item_id: int,
-    ) -> Claim:
+    ) -> Claim | None:
 
-        claim.status = ClaimStatus.ACCEPTED
+        result = await self.db.execute(
+            update(Claim)
+            .where(
+                Claim.id == claim_id,
+                Claim.status == ClaimStatus.PENDING,
+            )
+            .values(status=ClaimStatus.ACCEPTED)
+            .returning(Claim)
+        )
 
+        updated_claim = result.scalar_one_or_none()
+
+        if updated_claim is None:
+            return None
+
+        # Confirm the match if it was pending
+        await self.db.execute(
+            update(Match)
+            .where(
+                Match.id == match_id,
+                Match.status == MatchStatus.PENDING,
+            )
+            .values(status=MatchStatus.CONFIRMED)
+        )
+
+        # Close both items
         await self.db.execute(
             update(Item)
             .where(
@@ -171,21 +195,50 @@ class ClaimRepository:
             .values(status=ItemStatus.CLOSED)
         )
 
-        await self.db.commit()
-        await self.db.refresh(claim)
+        # Reject any other pending matches involving these items
+        await self.db.execute(
+            update(Match)
+            .where(
+                Match.id != match_id,
+                Match.status == MatchStatus.PENDING,
+                (
+                    (Match.lost_item_id == lost_item_id)
+                    | (Match.found_item_id == found_item_id)
+                ),
+            )
+            .values(status=MatchStatus.REJECTED)
+        )
 
-        return claim
+        await self.db.commit()
+        await self.db.refresh(updated_claim)
+
+        return updated_claim
 
     async def reject_claim(
         self,
         *,
-        claim: Claim,
+        claim_id: int,
+        match_id: int,
         lost_item_id: int,
         found_item_id: int,
-    ) -> Claim:
+    ) -> Claim | None:
 
-        claim.status = ClaimStatus.REJECTED
+        result = await self.db.execute(
+            update(Claim)
+            .where(
+                Claim.id == claim_id,
+                Claim.status == ClaimStatus.PENDING,
+            )
+            .values(status=ClaimStatus.REJECTED)
+            .returning(Claim)
+        )
 
+        updated_claim = result.scalar_one_or_none()
+
+        if updated_claim is None:
+            return None
+
+        # Return items to ACTIVE if they were MATCHED
         await self.db.execute(
             update(Item)
             .where(
@@ -199,6 +252,6 @@ class ClaimRepository:
         )
 
         await self.db.commit()
-        await self.db.refresh(claim)
+        await self.db.refresh(updated_claim)
 
-        return claim
+        return updated_claim
