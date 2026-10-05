@@ -21,9 +21,18 @@ class FoundFeedService:
         self.embedding_repository = ItemEmbeddingRepository(db)
         self.storage_service = StorageService()
 
+    # Per-LOST-vector candidate pool. max(100, page * limit) keeps results
+    # exact at dev/test scale while bounding memory in production. pgvector
+    # + HNSW makes each top-K query cheap.
+    CANDIDATE_FLOOR = 100
+
     async def get_feed(
         self,
         user_id: int,
+        page: int = 1,
+        limit: int = 20,
+        category: str | None = None,
+        search: str | None = None,
     ) -> list[FoundFeedItemResponse]:
 
         lost_items = await self.item_repository.get_active_lost_items_for_user(
@@ -45,26 +54,50 @@ class FoundFeedService:
         if not lost_embeddings:
             return []
 
-        found_embeddings = (
-            await self.embedding_repository.get_active_found_embeddings(
-                user_id
-            )
+        per_vector_k = max(
+            self.CANDIDATE_FLOOR,
+            page * limit,
         )
+
+        # Phase 4.1/4.2: one pgvector nearest-neighbor query per LOST
+        # embedding, then merge by best similarity per FOUND item.
+        best_by_found_id: dict[int, tuple[float, object]] = {}
+
+        for lost_vector in lost_embeddings:
+            candidates = (
+                await self.embedding_repository.search_found_candidates(
+                    query_embedding=lost_vector,
+                    exclude_user_id=user_id,
+                    limit=per_vector_k,
+                    category=category,
+                    search=search,
+                )
+            )
+
+            for found_embedding, distance in candidates:
+                similarity = min(1.0, max(0.0, 1 - float(distance)))
+                item_id = found_embedding.item.id
+
+                existing = best_by_found_id.get(item_id)
+
+                if existing is None or similarity > existing[0]:
+                    best_by_found_id[item_id] = (
+                        similarity,
+                        found_embedding,
+                    )
+
+        ranked = sorted(
+            best_by_found_id.values(),
+            key=lambda pair: pair[0],
+            reverse=True,
+        )
+
+        offset = (page - 1) * limit
+        page_slice = ranked[offset:offset + limit]
 
         results = []
 
-        for found_embedding in found_embeddings:
-
-            found_vector = found_embedding.embedding
-
-            best_similarity = max(
-                SimilarityService.cosine_similarity(
-                    lost_vector,
-                    found_vector,
-                )
-                for lost_vector in lost_embeddings
-            )
-
+        for best_similarity, found_embedding in page_slice:
             item = found_embedding.item
 
             images = []
@@ -92,11 +125,6 @@ class FoundFeedService:
                     images=images,
                 )
             )
-
-        results.sort(
-            key=lambda item: item.similarity_score,
-            reverse=True,
-        )
 
         return results
 
