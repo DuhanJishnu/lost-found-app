@@ -5,6 +5,8 @@ from app.models.user import User
 from app.models.item_embedding import ItemEmbedding
 from app.models.notification import Notification
 from app.models.claim import Claim, ClaimStatus
+from app.models.claim_question import ClaimQuestion, QuestionCategory
+from app.models.claim_answer import ClaimAnswer
 
 __all__ = [
     "User",
@@ -17,4 +19,7 @@ __all__ = [
     "Notification",
     "Claim",
     "ClaimStatus",
+    "ClaimQuestion",
+    "QuestionCategory",
+    "ClaimAnswer",
 ]
