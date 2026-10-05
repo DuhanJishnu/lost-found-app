@@ -2,7 +2,7 @@ import { backendFetch } from "@/lib/backend";
 import { Item } from "@/types/items";
 
 export async function getMyItems(): Promise<Item[]> {
-  const response = await backendFetch("/items");
+  const response = await backendFetch("/items/me");
 
   if (!response.ok) {
     throw new Error("Failed to fetch items");
