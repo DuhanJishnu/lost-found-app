@@ -1,4 +1,5 @@
-from sqlalchemy import select
+from geoalchemy2 import Geography
+from sqlalchemy import func, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -71,20 +72,37 @@ class ItemEmbeddingRepository:
         limit: int = 100,
         category: str | None = None,
         search: str | None = None,
+        nearby: tuple[float, float, float] | None = None,
     ):
         """pgvector nearest-neighbor search over ACTIVE FOUND items.
 
-        Filters (ACTIVE-only, exclude own items, category, text search)
-        are applied in SQL so only top-K candidates cross the DB boundary.
+        Filters (ACTIVE-only, exclude own items, category, text search,
+        geo radius) are applied in SQL so only top-K candidates cross
+        the DB boundary. Returns (embedding, vector_distance,
+        geo_meters | None) rows — geo_meters is None unless nearby is
+        given. Items without coordinates never match a geo filter.
         """
         distance = ItemEmbedding.embedding.cosine_distance(
             query_embedding
         )
 
+        geo_column = literal(None).label("geo_m")
+
+        if nearby is not None:
+            latitude, longitude, radius_km = nearby
+            reference = func.ST_SetSRID(
+                func.ST_MakePoint(longitude, latitude),
+                4326,
+            ).cast(Geography)
+            geo_column = func.ST_Distance(
+                Item.geog, reference
+            ).label("geo_m")
+
         query = (
             select(
                 ItemEmbedding,
                 distance.label("distance"),
+                geo_column,
             )
             .join(Item, Item.id == ItemEmbedding.item_id)
             .where(
@@ -106,6 +124,18 @@ class ItemEmbeddingRepository:
             query = query.where(
                 (Item.title.ilike(like))
                 | (Item.description.ilike(like))
+            )
+
+        if nearby is not None:
+            latitude, longitude, radius_km = nearby
+            reference = func.ST_SetSRID(
+                func.ST_MakePoint(longitude, latitude),
+                4326,
+            ).cast(Geography)
+            query = query.where(
+                func.ST_DWithin(
+                    Item.geog, reference, radius_km * 1000.0
+                )
             )
 
         query = query.order_by(distance).limit(limit)

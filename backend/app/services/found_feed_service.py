@@ -33,6 +33,9 @@ class FoundFeedService:
         limit: int = 20,
         category: str | None = None,
         search: str | None = None,
+        latitude: float | None = None,
+        longitude: float | None = None,
+        radius_km: float = 25.0,
     ) -> list[FoundFeedItemResponse]:
 
         lost_items = await self.item_repository.get_active_lost_items_for_user(
@@ -59,9 +62,14 @@ class FoundFeedService:
             page * limit,
         )
 
+        nearby = None
+
+        if latitude is not None or longitude is not None:
+            nearby = (latitude, longitude, radius_km)
+
         # Phase 4.1/4.2: one pgvector nearest-neighbor query per LOST
         # embedding, then merge by best similarity per FOUND item.
-        best_by_found_id: dict[int, tuple[float, object]] = {}
+        best_by_found_id: dict[int, tuple[float, object, float | None]] = {}
 
         for lost_vector in lost_embeddings:
             candidates = (
@@ -71,10 +79,11 @@ class FoundFeedService:
                     limit=per_vector_k,
                     category=category,
                     search=search,
+                    nearby=nearby,
                 )
             )
 
-            for found_embedding, distance in candidates:
+            for found_embedding, distance, geo_m in candidates:
                 similarity = min(1.0, max(0.0, 1 - float(distance)))
                 item_id = found_embedding.item.id
 
@@ -84,6 +93,7 @@ class FoundFeedService:
                     best_by_found_id[item_id] = (
                         similarity,
                         found_embedding,
+                        float(geo_m) / 1000.0 if geo_m is not None else None,
                     )
 
         ranked = sorted(
@@ -97,7 +107,7 @@ class FoundFeedService:
 
         results = []
 
-        for best_similarity, found_embedding in page_slice:
+        for best_similarity, found_embedding, distance_km in page_slice:
             item = found_embedding.item
 
             images = []
@@ -123,6 +133,7 @@ class FoundFeedService:
                     can_view_image=best_similarity > IMAGE_THRESHOLD,
                     can_claim=best_similarity > IMAGE_THRESHOLD,
                     images=images,
+                    distance_km=distance_km,
                 )
             )
 

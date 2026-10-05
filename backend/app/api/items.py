@@ -104,7 +104,16 @@ async def get_found_feed(
     limit: int = Query(default=20, ge=1, le=100),
     category: str | None = Query(default=None),
     q: str | None = Query(default=None),
+    latitude: float | None = Query(default=None, ge=-90, le=90),
+    longitude: float | None = Query(default=None, ge=-180, le=180),
+    radius_km: float = Query(default=25.0, gt=0, le=1000),
 ):
+    if (latitude is None) != (longitude is None):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="latitude and longitude must be provided together.",
+        )
+
     service = FoundFeedService(db)
 
     return await service.get_feed(
@@ -113,6 +122,9 @@ async def get_found_feed(
         limit=limit,
         category=category,
         search=q,
+        latitude=latitude,
+        longitude=longitude,
+        radius_km=radius_km,
     )
 
 

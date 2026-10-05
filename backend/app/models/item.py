@@ -1,7 +1,8 @@
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import DateTime, Float, ForeignKey, String, Text, func
+from geoalchemy2 import Geography, WKBElement
+from sqlalchemy import Computed, DateTime, Float, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -78,6 +79,20 @@ class Item(Base):
 
     longitude: Mapped[float | None] = mapped_column(
         Float,
+        nullable=True,
+    )
+
+    # Phase 7: PostGIS geography derived from lat/lon. GENERATED ALWAYS
+    # STORED in Postgres, so it is always in sync and never INSERTed by
+    # the ORM (Computed without persist_select keeps it out of writes).
+    geog: Mapped[WKBElement | None] = mapped_column(
+        Geography(geometry_type="POINT", srid=4326),
+        Computed(
+            "CASE WHEN latitude IS NULL OR longitude IS NULL THEN NULL "
+            "ELSE ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)"
+            "::geography END",
+            persisted=True,
+        ),
         nullable=True,
     )
 
