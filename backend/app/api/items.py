@@ -87,10 +87,20 @@ async def get_my_items(
 async def get_found_feed(
     user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=20, ge=1, le=100),
+    category: str | None = Query(default=None),
+    q: str | None = Query(default=None),
 ):
     service = FoundFeedService(db)
 
-    return await service.get_feed(user_id)
+    return await service.get_feed(
+        user_id,
+        page=page,
+        limit=limit,
+        category=category,
+        search=q,
+    )
 
 
 @router.get(

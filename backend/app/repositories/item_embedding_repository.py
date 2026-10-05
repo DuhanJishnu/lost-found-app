@@ -64,6 +64,56 @@ class ItemEmbeddingRepository:
 
         return result.all()
 
+    async def search_found_candidates(
+        self,
+        query_embedding: list[float],
+        exclude_user_id: int,
+        limit: int = 100,
+        category: str | None = None,
+        search: str | None = None,
+    ):
+        """pgvector nearest-neighbor search over ACTIVE FOUND items.
+
+        Filters (ACTIVE-only, exclude own items, category, text search)
+        are applied in SQL so only top-K candidates cross the DB boundary.
+        """
+        distance = ItemEmbedding.embedding.cosine_distance(
+            query_embedding
+        )
+
+        query = (
+            select(
+                ItemEmbedding,
+                distance.label("distance"),
+            )
+            .join(Item, Item.id == ItemEmbedding.item_id)
+            .where(
+                Item.type == ItemType.FOUND,
+                Item.status == ItemStatus.ACTIVE,
+                Item.user_id != exclude_user_id,
+            )
+            .options(
+                selectinload(ItemEmbedding.item)
+                .selectinload(Item.images)
+            )
+        )
+
+        if category:
+            query = query.where(Item.category.ilike(category))
+
+        if search:
+            like = f"%{search}%"
+            query = query.where(
+                (Item.title.ilike(like))
+                | (Item.description.ilike(like))
+            )
+
+        query = query.order_by(distance).limit(limit)
+
+        result = await self.db.execute(query)
+
+        return list(result.all())
+
     async def get_active_found_embeddings(
         self,
         user_id: int,
