@@ -8,6 +8,25 @@ from app.config import get_settings
 
 
 class StorageService:
+    """Private-bucket presigned URL issuer.
+
+    Security invariant (Phase 6.3): this class performs NO authorization
+    itself. Every signed-URL call site MUST enforce ownership first:
+      - download URLs: ItemImage -> Item -> user_id check
+        (api/storage.py) or the 40% similarity gate (found_feed_service).
+      - upload URLs: authenticated caller only (api/storage.py).
+      - worker-internal reads (get_object/head_object): server-side only,
+        never exposed to clients.
+    Raw R2 object keys must never be sent to clients except the key owner
+    (ItemResponse.images) or the uploader receiving their own fresh key.
+
+    Expiry (Phase 6.4): all presigned URLs live SIGNED_URL_TTL_SECONDS.
+    Clients treat image URLs as single-use, short-lived values and
+    re-request them per view (the frontend resolves fresh URLs on every
+    server render); on expiry, re-request instead of caching.
+    """
+
+    SIGNED_URL_TTL_SECONDS = 300
 
     def __init__(self):
         settings = get_settings()
@@ -47,7 +66,7 @@ class StorageService:
                 "Key": object_key,
                 "ContentType": content_type,
             },
-            ExpiresIn=300,
+            ExpiresIn=self.SIGNED_URL_TTL_SECONDS,
         )
 
         return upload_url, object_key
@@ -64,7 +83,7 @@ class StorageService:
                 "Bucket": self.bucket_name,
                 "Key": object_key,
             },
-            ExpiresIn=300,
+            ExpiresIn=self.SIGNED_URL_TTL_SECONDS,
         )
 
         return download_url

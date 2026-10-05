@@ -30,6 +30,9 @@ def get_storage_service() -> StorageService:
 )
 async def create_upload_url(
     data: UploadUrlRequest,
+    # Phase 6.3: minting upload URLs requires authentication so
+    # anonymous callers cannot stockpile keys in the private bucket.
+    user_id: int = Depends(get_current_user_id),
     storage: StorageService = Depends(
         get_storage_service
     ),
