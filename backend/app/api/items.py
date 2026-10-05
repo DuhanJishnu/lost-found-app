@@ -9,6 +9,7 @@ from app.schemas.item import CreateItemRequest, ItemResponse
 from app.schemas.found_feed import FoundItemDetailResponse
 from app.services.item_service import ItemService
 from app.services.job_queue import enqueue_item_processing
+from app.services.storage_service import StorageService
 from app.services.found_feed_service import (
     FoundFeedService,
     FoundFeedItemResponse,
@@ -25,7 +26,7 @@ def get_item_service(
     db: AsyncSession = Depends(get_db),
 ) -> ItemService:
     repository = ItemRepository(db)
-    return ItemService(repository)
+    return ItemService(repository, StorageService())
 
 
 @router.post(
@@ -38,19 +39,30 @@ async def create_item(
     user_id: int = Depends(get_current_user_id),
     service: ItemService = Depends(get_item_service),
 ):
-    item = await service.create_item(
-        user_id=user_id,
-        data=data,
-    )
+    try:
+        item = await service.create_item(
+            user_id=user_id,
+            data=data,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
 
     await enqueue_item_processing(item.id)
 
     return item
 
 
+# NOTE (Phase 5.1 decision): the generic list exposed every item without
+# ownership rules. It now requires authentication and is deprecated —
+# clients must use GET /items/me (own items) or GET /items/found/feed
+# (discovery). Kept temporarily for backward compatibility.
 @router.get(
     "",
     response_model=list[ItemResponse],
+    deprecated=True,
 )
 async def get_items(
     item_type: ItemType | None = Query(default=None),
@@ -58,6 +70,7 @@ async def get_items(
     status: ItemStatus | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    user_id: int = Depends(get_current_user_id),
     service: ItemService = Depends(get_item_service),
 ):
     return await service.get_items(
@@ -139,7 +152,7 @@ async def get_found_item_detail(
 
 @router.get(
     "/{item_id}",
-    response_model=ItemResponse,
+    response_model=ItemResponse | FoundItemDetailResponse,
 )
 async def get_item(
     item_id: int,
@@ -148,10 +161,16 @@ async def get_item(
 ):
     repository = ItemRepository(db)
 
-    item = await repository.get_by_id_for_user(
+    # Own items: full response.
+    own_item = await repository.get_by_id_for_user(
         item_id=item_id,
         user_id=user_id,
     )
+
+    if own_item is not None:
+        return own_item
+
+    item = await repository.get_by_id(item_id)
 
     if item is None:
         raise HTTPException(
@@ -159,5 +178,36 @@ async def get_item(
             detail="Item not found",
         )
 
-    return item
+    # Someone else's LOST items (or non-active items) are never exposed.
+    if item.type != ItemType.FOUND or item.status != ItemStatus.ACTIVE:
+        raise HTTPException(
+            status_code=404,
+            detail="Item not found",
+        )
+
+    # Someone else's ACTIVE FOUND item: feed/detail visibility rules
+    # (LOST registration required, image gated by 40% similarity).
+    service = FoundFeedService(db)
+
+    try:
+        detail = await service.get_item_detail(
+            item_id=item_id,
+            user_id=user_id,
+        )
+    except LostItemRequiredError:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "LOST_ITEM_REQUIRED",
+                "message": "Register your lost item first to claim a relevant found item.",
+            },
+        )
+
+    if detail is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Item not found",
+        )
+
+    return detail
 

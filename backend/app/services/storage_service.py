@@ -2,6 +2,7 @@ import uuid
 
 import boto3
 from botocore.client import Config
+from botocore.exceptions import ClientError
 
 from app.config import get_settings
 
@@ -67,6 +68,32 @@ class StorageService:
         )
 
         return download_url
+
+    def head_object(
+        self,
+        *,
+        object_key: str,
+    ) -> dict | None:
+        """Return R2 metadata for object_key, or None if it doesn't exist.
+
+        Used to validate image_keys at item-creation time without
+        downloading the object.
+        """
+        try:
+            response = self.client.head_object(
+                Bucket=self.bucket_name,
+                Key=object_key,
+            )
+        except ClientError as exc:
+            if exc.response.get("Error", {}).get("Code") in (
+                "404",
+                "NoSuchKey",
+                "NotFound",
+            ):
+                return None
+            raise
+
+        return response
 
     def get_object(
         self,
