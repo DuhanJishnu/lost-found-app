@@ -44,9 +44,52 @@ def get_match_service(
     )
 
 
+@router.get(
+    "",
+    response_model=list[MatchResponse],
+)
+async def list_matches(
+    current_user_id: int = Depends(
+        get_current_user_id
+    ),
+    service: MatchService = Depends(get_match_service),
+):
+    return await service.list_matches_for_user(
+        user_id=current_user_id,
+    )
+
+
+@router.get(
+    "/{match_id}",
+    response_model=MatchResponse,
+)
+async def get_match(
+    match_id: int,
+    current_user_id: int = Depends(
+        get_current_user_id
+    ),
+    service: MatchService = Depends(get_match_service),
+):
+    try:
+        return await service.get_match_for_user(
+            match_id=match_id,
+            user_id=current_user_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        )
+
+
+# NOTE (Phase 3.3 decision): manual find trigger kept as a debug/internal
+# endpoint. The production pipeline runs matching in the ARQ background
+# worker; this route requires item ownership and is marked deprecated so it
+# does not become a public matching API.
 @router.post(
     "/items/{item_id}/find",
     response_model=list[MatchResponse],
+    deprecated=True,
 )
 async def find_matches(
     item_id: int,

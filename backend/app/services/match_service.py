@@ -145,6 +145,66 @@ class MatchService:
 
             return matches
 
+        async def list_matches_for_user(
+            self,
+            user_id: int,
+        ):
+            matches = await self.match_repository.get_for_user(user_id)
+            return [await self._to_enriched_match(m) for m in matches]
+
+        async def get_match_for_user(
+            self,
+            match_id: int,
+            user_id: int,
+        ):
+            match = await self.match_repository.get_by_id_for_user(
+                match_id=match_id,
+                user_id=user_id,
+            )
+            if match is None:
+                raise ValueError("Match not found")
+            return await self._to_enriched_match(match)
+
+        async def _to_enriched_match(self, match):
+            lost_item = await self.item_repository.get_by_id(
+                match.lost_item_id
+            )
+            found_item = await self.item_repository.get_by_id(
+                match.found_item_id
+            )
+            return {
+                "id": match.id,
+                "lost_item_id": match.lost_item_id,
+                "found_item_id": match.found_item_id,
+                "similarity_score": match.similarity_score,
+                "status": match.status,
+                "created_at": match.created_at,
+                "lost_item": (
+                    {
+                        "id": lost_item.id,
+                        "user_id": lost_item.user_id,
+                        "type": lost_item.type.value,
+                        "title": lost_item.title,
+                        "category": lost_item.category,
+                        "status": lost_item.status.value,
+                    }
+                    if lost_item is not None
+                    else None
+                ),
+                "found_item": (
+                    {
+                        "id": found_item.id,
+                        "user_id": found_item.user_id,
+                        "type": found_item.type.value,
+                        "title": found_item.title,
+                        "category": found_item.category,
+                        "status": found_item.status.value,
+                    }
+                    if found_item is not None
+                    else None
+                ),
+            }
+
         async def update_match_status(
             self,
             match_id: int,

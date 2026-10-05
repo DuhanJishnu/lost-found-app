@@ -1,5 +1,6 @@
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.models.match import Match, MatchStatus
 from app.models.item import Item, ItemStatus
@@ -50,6 +51,61 @@ class MatchRepository:
         result = await self.db.execute(
             select(Match).where(
                 Match.id == match_id
+            )
+        )
+
+        return result.scalar_one_or_none()
+
+    async def get_for_user(
+        self,
+        user_id: int,
+    ) -> list[Match]:
+        lost_item = aliased(Item)
+        found_item = aliased(Item)
+
+        result = await self.db.execute(
+            select(Match)
+            .join(
+                lost_item,
+                lost_item.id == Match.lost_item_id,
+            )
+            .join(
+                found_item,
+                found_item.id == Match.found_item_id,
+            )
+            .where(
+                (lost_item.user_id == user_id)
+                | (found_item.user_id == user_id)
+            )
+            .order_by(Match.created_at.desc())
+        )
+
+        return list(result.scalars().all())
+
+    async def get_by_id_for_user(
+        self,
+        match_id: int,
+        user_id: int,
+    ) -> Match | None:
+        lost_item = aliased(Item)
+        found_item = aliased(Item)
+
+        result = await self.db.execute(
+            select(Match)
+            .join(
+                lost_item,
+                lost_item.id == Match.lost_item_id,
+            )
+            .join(
+                found_item,
+                found_item.id == Match.found_item_id,
+            )
+            .where(
+                Match.id == match_id,
+                (
+                    (lost_item.user_id == user_id)
+                    | (found_item.user_id == user_id)
+                ),
             )
         )
 
