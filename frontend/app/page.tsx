@@ -1,6 +1,5 @@
 import { SignInButton } from "@/components/auth/sign-in-button";
 import { backendFetch } from "@/lib/backend";
-import { Button } from "@/components/ui/button";
 import { DashboardButton } from "@/components/DashboardButton";
 import { FoundItemButton } from "@/components/FoundItemButton";
 
