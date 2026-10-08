@@ -14,6 +14,7 @@ from app.schemas.match import (
 )
 from app.models.match import MatchStatus
 from app.services.match_service import MatchService
+from app.services.storage_service import StorageService
 
 from app.repositories.notification_repository import NotificationRepository
 from app.services.notification_service import NotificationService
@@ -41,6 +42,7 @@ def get_match_service(
         embedding_repository=ItemEmbeddingRepository(db),
         match_repository=MatchRepository(db),
         notification_service=notification_service,
+        storage_service=StorageService(),
     )
 
 

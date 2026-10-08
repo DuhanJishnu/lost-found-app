@@ -29,7 +29,14 @@ from app.services.match_service import MatchService
 from app.services.notification_service import NotificationService
 
 
-def make_service(session):
+class StubStorage:
+    """Offline signed-URL stand-in (no R2 network)."""
+
+    def generate_download_url(self, *, object_key):
+        return f"https://cdn.test/{object_key}"
+
+
+def make_service(session, storage=None):
     return MatchService(
         item_repository=ItemRepository(session),
         embedding_repository=ItemEmbeddingRepository(session),
@@ -37,6 +44,7 @@ def make_service(session):
         notification_service=NotificationService(
             NotificationRepository(session)
         ),
+        storage_service=storage,
     )
 
 
@@ -273,4 +281,77 @@ async def test_confirm_rejects_competing_matches_transactionally():
                 )
     finally:
         async with AsyncSessionLocal() as session:
+            await _cleanup(session, ids["users"], ids["items"], ids["lost"])
+
+
+@pytest.mark.asyncio
+async def test_enriched_summaries_carry_photos_and_details():
+    """Stitch screen 4: summaries include description, created_at,
+    coordinates, and a signed first-photo URL (None without photos)."""
+    from app.models.item_image import ItemImage
+
+    uid = uuid.uuid4().hex[:8]
+    async with AsyncSessionLocal() as session:
+        claimant, finder_a, finder_b, stranger = await _make_users(
+            session, uid
+        )
+        lost = Item(
+            user_id=claimant.id, type=ItemType.LOST,
+            title=f"Lost {uid}", description="lost wallet",
+            category="Accessories", status=ItemStatus.ACTIVE,
+            latitude=31.5, longitude=74.35,
+        )
+        found = Item(
+            user_id=finder_a.id, type=ItemType.FOUND,
+            title=f"Found {uid}", description="found wallet",
+            category="Accessories", status=ItemStatus.ACTIVE,
+        )
+        session.add_all([lost, found])
+        await session.commit()
+        await session.refresh(lost)
+        await session.refresh(found)
+        session.add(ItemImage(
+            item_id=found.id, object_key=f"test/{found.id}.jpg",
+            content_type="image/jpeg",
+        ))
+        await session.commit()
+
+        match_repo = MatchRepository(session)
+        match = await match_repo.create(
+            lost_item_id=lost.id, found_item_id=found.id,
+            similarity_score=0.9,
+        )
+        await session.commit()
+        ids = {
+            "users": [u.id for u in
+                      (claimant, finder_a, finder_b, stranger)],
+            "items": [lost.id, found.id],
+            "lost": lost.id,
+        }
+        match_id = match.id
+
+    try:
+        async with AsyncSessionLocal() as session:
+            svc = make_service(session, storage=StubStorage())
+            detail = await svc.get_match_for_user(match_id, claimant.id)
+            assert detail["lost_item"]["description"] == "lost wallet"
+            assert detail["lost_item"]["created_at"] is not None
+            assert detail["lost_item"]["latitude"] == pytest.approx(31.5)
+            assert detail["lost_item"]["image_url"] is None
+            assert detail["found_item"]["image_url"] == (
+                f"https://cdn.test/test/{found.id}.jpg"
+            )
+
+            # No storage backend (worker path): summaries still work.
+            plain = make_service(session)
+            detail_plain = await plain.get_match_for_user(
+                match_id, claimant.id
+            )
+            assert detail_plain["found_item"]["image_url"] is None
+    finally:
+        async with AsyncSessionLocal() as session:
+            await session.execute(
+                delete(ItemImage).where(
+                    ItemImage.item_id.in_(ids["items"])))
+            await session.commit()
             await _cleanup(session, ids["users"], ids["items"], ids["lost"])

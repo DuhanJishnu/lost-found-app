@@ -21,11 +21,15 @@ class MatchService:
             embedding_repository: ItemEmbeddingRepository,
             match_repository: MatchRepository,
             notification_service: NotificationService,
+            storage_service=None,
         ):
             self.item_repository = item_repository
             self.embedding_repository = embedding_repository
             self.match_repository = match_repository
             self.notification_service = notification_service
+            # Optional: only the API layer signs photo URLs. The ARQ
+            # worker passes nothing and never touches signed URLs.
+            self.storage_service = storage_service
 
         async def find_matches(
             self,
@@ -135,6 +139,11 @@ class MatchService:
                     lost_item_id
                 )
 
+                # Phase 9.4/9.5: the match row above is flushed but
+                # uncommitted, so this single commit persists the match
+                # and its notification atomically. A failure rolls both
+                # back and the ARQ job retries (deduped by
+                # get_existing_match).
                 await self.notification_service.notify_match(
                     user_id=lost_item.user_id,
                     match_id=match.id,
@@ -165,6 +174,36 @@ class MatchService:
                 raise ValueError("Match not found")
             return await self._to_enriched_match(match)
 
+        def _summarize_item(self, item):
+            if item is None:
+                return None
+
+            image_url = None
+
+            if (
+                self.storage_service is not None
+                and item.images
+            ):
+                image_url = (
+                    self.storage_service.generate_download_url(
+                        object_key=item.images[0].object_key,
+                    )
+                )
+
+            return {
+                "id": item.id,
+                "user_id": item.user_id,
+                "type": item.type.value,
+                "title": item.title,
+                "description": item.description,
+                "category": item.category,
+                "status": item.status.value,
+                "created_at": item.created_at,
+                "latitude": item.latitude,
+                "longitude": item.longitude,
+                "image_url": image_url,
+            }
+
         async def _to_enriched_match(self, match):
             lost_item = await self.item_repository.get_by_id(
                 match.lost_item_id
@@ -179,30 +218,8 @@ class MatchService:
                 "similarity_score": match.similarity_score,
                 "status": match.status,
                 "created_at": match.created_at,
-                "lost_item": (
-                    {
-                        "id": lost_item.id,
-                        "user_id": lost_item.user_id,
-                        "type": lost_item.type.value,
-                        "title": lost_item.title,
-                        "category": lost_item.category,
-                        "status": lost_item.status.value,
-                    }
-                    if lost_item is not None
-                    else None
-                ),
-                "found_item": (
-                    {
-                        "id": found_item.id,
-                        "user_id": found_item.user_id,
-                        "type": found_item.type.value,
-                        "title": found_item.title,
-                        "category": found_item.category,
-                        "status": found_item.status.value,
-                    }
-                    if found_item is not None
-                    else None
-                ),
+                "lost_item": self._summarize_item(lost_item),
+                "found_item": self._summarize_item(found_item),
             }
 
         async def update_match_status(

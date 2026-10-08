@@ -17,8 +17,17 @@ class MatchItemSummary(BaseModel):
     user_id: int
     type: str
     title: str
+    description: str
     category: str
     status: str
+    created_at: datetime
+    latitude: float | None = None
+    longitude: float | None = None
+    # Stitch screen 4: first photo as a signed URL so the comparison
+    # view can render without exposing raw R2 object keys. Only ever
+    # populated for match participants (endpoints are ownership-checked;
+    # auto-matches score >= 60%, above the 40% photo gate).
+    image_url: str | None = None
 
     model_config = {
         "from_attributes": True
