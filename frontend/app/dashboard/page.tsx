@@ -1,4 +1,4 @@
-import { getMyItems } from "@/lib/items";
+import { getItemImageUrl, getMyItems } from "@/lib/items";
 
 import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
@@ -9,6 +9,20 @@ import { ItemGrid } from "@/components/items/item-grid";
 
 export default async function DashboardPage() {
   const items = await getMyItems();
+
+  // Resolve each item's first photo to a short-lived signed URL, just
+  // like the detail page does. One bad image must not break the grid.
+  const imageUrls = await Promise.all(
+    items.map(async (item) => {
+      if (item.images.length === 0) return undefined;
+
+      try {
+        return await getItemImageUrl(item.images[0].object_key);
+      } catch {
+        return undefined;
+      }
+    }),
+  );
 
   return (
     <PageShell>
@@ -26,8 +40,12 @@ export default async function DashboardPage() {
         />
       ) : (
         <ItemGrid>
-          {items.map((item) => (
-            <ItemCard key={item.id} item={item} />
+          {items.map((item, index) => (
+            <ItemCard
+              key={item.id}
+              item={item}
+              imageUrl={imageUrls[index]}
+            />
           ))}
         </ItemGrid>
       )}
