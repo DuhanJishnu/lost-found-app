@@ -7,6 +7,7 @@ from app.api.match import router as matches_router
 from app.api.notification import router as notifications_router
 from app.api.auth import router as auth_router
 from app.api.claims import router as claims_router
+from app.api.users import router as users_router
 
 app = FastAPI(
     title="Lost & Found API",
@@ -22,6 +23,7 @@ app.include_router(matches_router)
 app.include_router(notifications_router)
 app.include_router(auth_router)
 app.include_router(claims_router)
+app.include_router(users_router)
 
 @app.get("/")
 async def root():
