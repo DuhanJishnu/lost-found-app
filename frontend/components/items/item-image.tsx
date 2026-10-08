@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 const ratios = {
   video: "aspect-video",
   square: "aspect-square",
+  landscape: "aspect-[4/3]",
 } as const;
 
 interface ItemImageProps {

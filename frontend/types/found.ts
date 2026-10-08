@@ -8,6 +8,7 @@ export interface FoundFeedItem {
   title: string;
   description: string;
   category: string;
+  created_at: string;
   similarity_score: number;
   can_view_image: boolean;
   can_claim: boolean;
@@ -15,4 +16,9 @@ export interface FoundFeedItem {
   // Phase 7.5: km from the feed's reference point; null when the feed
   // was not requested with ?latitude=&longitude=. Display as "X km away".
   distance_km: number | null;
+}
+
+export interface FoundItemDetail extends FoundFeedItem {
+  latitude: number | null;
+  longitude: number | null;
 }
