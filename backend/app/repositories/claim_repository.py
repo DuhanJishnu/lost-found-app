@@ -209,7 +209,9 @@ class ClaimRepository:
             .values(status=MatchStatus.REJECTED)
         )
 
-        await self.db.commit()
+        # Phase 9.5: flush only — the service stages the notification
+        # next and commits everything atomically.
+        await self.db.flush()
         await self.db.refresh(updated_claim)
 
         return updated_claim
@@ -251,7 +253,9 @@ class ClaimRepository:
             .values(status=ItemStatus.ACTIVE)
         )
 
-        await self.db.commit()
+        # Phase 9.5: flush only — the service stages the notification
+        # next and commits everything atomically.
+        await self.db.flush()
         await self.db.refresh(updated_claim)
 
         return updated_claim

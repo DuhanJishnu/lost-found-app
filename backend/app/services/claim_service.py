@@ -164,36 +164,34 @@ class ClaimService:
                 "A claim already exists for this match"
             )
 
-        # 6. Create the claim in an atomic transaction
+        # 6. Get the found item first (needed for the notify target)
+        found_item = await self.item_repository.get_by_id(
+            match.found_item_id
+        )
+
+        # 7. Create the claim and stage the finder notification in one
+        # atomic transaction (Phase 9.5).
         try:
             async with self.db.begin_nested():
                 claim = await self.claim_repository.create(
                     match_id=match_id,
                     claimant_id=claimant_id,
                 )
+
+                if found_item is not None:
+                    await self.notification_service.notify_claim_created(
+                        user_id=found_item.user_id,
+                        match_id=match.id,
+                        claim_id=claim.id,
+                        commit=False,
+                    )
             await self.db.commit()
             await self.db.refresh(claim)
         except IntegrityError:
             await self.db.rollback()
             raise ValueError("A claim already exists for this match")
 
-        # 7. Get the found item
-        found_item = await self.item_repository.get_by_id(
-            match.found_item_id
-        )
-
-        # 8. Notify the finder
-        if found_item is not None:
-            try:
-                await self.notification_service.notify_claim_created(
-                    user_id=found_item.user_id,
-                    match_id=match.id,
-                    claim_id=claim.id,
-                )
-            except Exception:
-                pass
-
-        # 9. Return the created claim
+        # 8. Return the created claim
         return claim
 
     async def update_claim_status(
@@ -242,7 +240,9 @@ class ClaimService:
                 "Only the finder can accept or reject this claim"
             )
 
-        # 7. Reject claim
+        # 7. Reject claim — notification joins the same transaction
+        # (Phase 9.5): a failed notify rolls the decision back instead
+        # of silently dropping it.
         if status == ClaimStatus.REJECTED:
             updated_claim = await self.claim_repository.reject_claim(
                 claim_id=claim.id,
@@ -254,19 +254,18 @@ class ClaimService:
             if updated_claim is None:
                 raise ValueError("Claim has already been decided")
 
-            # Notify the claimant
-            try:
-                await self.notification_service.notify_claim_rejected(
-                    user_id=claim.claimant_id,
-                    match_id=match.id,
-                    claim_id=claim.id,
-                )
-            except Exception:
-                pass
+            await self.notification_service.notify_claim_rejected(
+                user_id=claim.claimant_id,
+                match_id=match.id,
+                claim_id=claim.id,
+                commit=False,
+            )
+            await self.db.commit()
+            await self.db.refresh(updated_claim)
 
             return updated_claim
 
-        # 8. Accept claim
+        # 8. Accept claim — same transactional notify.
         if status == ClaimStatus.ACCEPTED:
             updated_claim = await self.claim_repository.accept_claim(
                 claim_id=claim.id,
@@ -278,15 +277,14 @@ class ClaimService:
             if updated_claim is None:
                 raise ValueError("Claim has already been decided")
 
-            # Notify the claimant
-            try:
-                await self.notification_service.notify_claim_accepted(
-                    user_id=claim.claimant_id,
-                    match_id=match.id,
-                    claim_id=claim.id,
-                )
-            except Exception:
-                pass
+            await self.notification_service.notify_claim_accepted(
+                user_id=claim.claimant_id,
+                match_id=match.id,
+                claim_id=claim.id,
+                commit=False,
+            )
+            await self.db.commit()
+            await self.db.refresh(updated_claim)
 
             return updated_claim
 
@@ -446,6 +444,15 @@ class ClaimService:
                     claimant_id=user_id,
                 )
 
+                # 7. Notify the finder inside the same transaction
+                # (Phase 9.5) instead of after the commit.
+                await self.notification_service.notify_claim_created(
+                    user_id=found_item.user_id,
+                    match_id=match.id,
+                    claim_id=claim.id,
+                    commit=False,
+                )
+
             await self.db.commit()
             await self.db.refresh(claim)
         except IntegrityError:
@@ -454,17 +461,6 @@ class ClaimService:
                 status_code=status.HTTP_409_CONFLICT,
                 detail="A claim already exists for this match",
             )
-
-
-        # 7. Notify the finder (owner of the FOUND item) outside transaction
-        try:
-            await self.notification_service.notify_claim_created(
-                user_id=found_item.user_id,
-                match_id=match.id,
-                claim_id=claim.id,
-            )
-        except Exception:
-            pass
 
         return claim
 

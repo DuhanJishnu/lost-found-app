@@ -31,10 +31,18 @@ class NotificationService:
     async def get_user_notifications(
         self,
         user_id: int,
+        limit: int = 50,
     ):
         return await self.repository.get_for_user(
-            user_id
+            user_id,
+            limit=limit,
         )
+
+    async def mark_all_as_read(
+        self,
+        user_id: int,
+    ) -> int:
+        return await self.repository.mark_all_as_read(user_id)
 
     async def notify_claim_created(
         self,
@@ -42,8 +50,15 @@ class NotificationService:
         user_id: int,
         claim_id: int,
         match_id: int,
+        commit: bool = True,
     ) -> Notification:
-        return await self.repository.create(
+        create = (
+            self.repository.create
+            if commit
+            else self.repository.create_pending
+        )
+
+        return await create(
             user_id=user_id,
             match_id=match_id,
             claim_id=claim_id,
@@ -58,9 +73,16 @@ class NotificationService:
         *,
         user_id: int,
         match_id: int,
-        claim_id: int
+        claim_id: int,
+        commit: bool = True,
     ) -> Notification:
-        return await self.repository.create(
+        create = (
+            self.repository.create
+            if commit
+            else self.repository.create_pending
+        )
+
+        return await create(
             user_id=user_id,
             match_id=match_id,
             claim_id=claim_id,
@@ -78,8 +100,15 @@ class NotificationService:
         user_id: int,
         match_id: int,
         claim_id: int,
+        commit: bool = True,
     ) -> Notification:
-        return await self.repository.create(
+        create = (
+            self.repository.create
+            if commit
+            else self.repository.create_pending
+        )
+
+        return await create(
             user_id=user_id,
             match_id=match_id,
             claim_id=claim_id,

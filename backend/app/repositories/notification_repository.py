@@ -32,9 +32,38 @@ class NotificationRepository:
 
         return notification
 
+    async def create_pending(
+        self,
+        *,
+        user_id: int,
+        match_id: int,
+        title: str,
+        message: str,
+        claim_id: int | None = None,
+    ):
+        """Stage a notification inside the caller's transaction.
+
+        Flush-only (no commit): the caller commits, so the notification
+        persists atomically with the match/claim event (Phase 9.5).
+        """
+        notification = Notification(
+            user_id=user_id,
+            match_id=match_id,
+            claim_id=claim_id,
+            title=title,
+            message=message,
+        )
+
+        self.db.add(notification)
+
+        await self.db.flush()
+
+        return notification
+
     async def get_for_user(
         self,
         user_id: int,
+        limit: int = 50,
     ):
         result = await self.db.execute(
             select(Notification)
@@ -44,9 +73,28 @@ class NotificationRepository:
             .order_by(
                 Notification.created_at.desc()
             )
+            .limit(limit)
         )
 
-        return result.scalars().all()
+        return list(result.scalars().all())
+
+    async def mark_all_as_read(
+        self,
+        user_id: int,
+    ) -> int:
+        """Mark every unread notification read. Returns the count."""
+        result = await self.db.execute(
+            update(Notification)
+            .where(
+                Notification.user_id == user_id,
+                Notification.is_read.is_(False),
+            )
+            .values(is_read=True)
+        )
+
+        await self.db.commit()
+
+        return result.rowcount or 0
 
     async def mark_as_read(
         self,
