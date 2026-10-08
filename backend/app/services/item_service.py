@@ -41,6 +41,7 @@ class ItemService:
             category=data.category,
             latitude=data.latitude,
             longitude=data.longitude,
+            occurred_at=data.occurred_at,
         )
 
         image_keys = [

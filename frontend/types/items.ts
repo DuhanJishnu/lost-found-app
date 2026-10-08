@@ -20,5 +20,7 @@ export interface Item {
   status: ItemStatus;
   latitude: number | null;
   longitude: number | null;
+  occurred_at: string | null;
+  created_at: string;
   images: ItemImage[];
 }

@@ -102,6 +102,13 @@ class Item(Base):
         index=True,
     )
 
+    # Stitch screen 3: when the item was lost/found, if the reporter
+    # gave a date. Optional — never blocks creation or matching.
+    occurred_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

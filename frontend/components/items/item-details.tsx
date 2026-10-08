@@ -6,11 +6,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+import { formatDateTime } from "@/lib/format";
 import { Item } from "@/types/items";
 import { DetailSection } from "./detail-section";
 import { ItemImage } from "./item-image";
 import { ItemStatusBadge } from "./item-status-badge";
 import { ItemTypeBadge } from "./item-type-badge";
+import { LocationMiniMapLoader } from "./location-mini-map-loader";
 
 interface ItemDetailsProps {
   item: Item;
@@ -58,11 +60,29 @@ export function ItemDetails({ item, imageUrls }: ItemDetailsProps) {
           </p>
         </DetailSection>
 
+        {item.occurred_at && (
+          <DetailSection
+            title={item.type === "LOST" ? "Lost on" : "Found on"}
+          >
+            <p className="text-sm text-muted-foreground">
+              {formatDateTime(item.occurred_at)}
+            </p>
+          </DetailSection>
+        )}
+
         {hasLocation && (
           <DetailSection title="Location">
-            <p className="text-sm text-muted-foreground">
-              {item.latitude}, {item.longitude}
-            </p>
+            <div className="space-y-3">
+              <LocationMiniMapLoader
+                latitude={item.latitude as number}
+                longitude={item.longitude as number}
+                title={item.title}
+              />
+
+              <p className="text-sm text-muted-foreground">
+                {item.latitude}, {item.longitude}
+              </p>
+            </div>
           </DetailSection>
         )}
       </CardContent>

@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 
 from pydantic import BaseModel, Field
@@ -9,6 +10,7 @@ class CreateItemRequest(BaseModel):
     title: str = Field(min_length=2, max_length=200)
     description: str = Field(min_length=5, max_length=5000)
     category: str = Field(min_length=2, max_length=100)
+    occurred_at: datetime | None = Field(default=None)
 
     # allowing 5 images per item for now
     image_keys: list[str] = Field(
@@ -38,6 +40,8 @@ class ItemResponse(BaseModel):
     status: ItemStatus
     latitude: float | None
     longitude: float | None
+    occurred_at: datetime | None = None
+    created_at: datetime
     images: list[ItemImageResponse] = Field(
         default_factory=list
     )
