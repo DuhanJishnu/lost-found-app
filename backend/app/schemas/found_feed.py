@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 class FoundFeedImageResponse(BaseModel):
@@ -9,6 +11,7 @@ class FoundFeedItemResponse(BaseModel):
     title: str
     description: str
     category: str
+    created_at: datetime
 
     similarity_score: float = Field(ge=0, le=1)
 
@@ -26,6 +29,9 @@ class FoundItemDetailResponse(BaseModel):
     title: str
     description: str
     category: str
+    created_at: datetime
+    latitude: float | None = None
+    longitude: float | None = None
 
     similarity_score: float = Field(ge=0, le=1)
 

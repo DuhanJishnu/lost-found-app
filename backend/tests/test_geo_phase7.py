@@ -160,6 +160,39 @@ async def test_radius_filter_and_distance():
 
 
 @pytest.mark.asyncio
+async def test_detail_carries_coordinates():
+    """Stitch screen 2: the detail response includes lat/lon for the
+    recovery-area map (None when the reporter skipped location)."""
+    uid = uuid.uuid4().hex[:8]
+    async with AsyncSessionLocal() as session:
+        owner, finder, lost, near, far, noloc = await _setup(session, uid)
+        ids = {
+            "users": [owner.id, finder.id],
+            "items": [lost.id, near.id, far.id, noloc.id],
+        }
+
+    try:
+        async with AsyncSessionLocal() as session:
+            svc = FoundFeedService(session)
+            pinned = await svc.get_item_detail(
+                item_id=near.id, user_id=owner.id
+            )
+            assert pinned is not None
+            assert pinned.latitude == pytest.approx(NEAR_LAT)
+            assert pinned.longitude == pytest.approx(NEAR_LON)
+
+            unpinned = await svc.get_item_detail(
+                item_id=noloc.id, user_id=owner.id
+            )
+            assert unpinned is not None
+            assert unpinned.latitude is None
+            assert unpinned.longitude is None
+    finally:
+        async with AsyncSessionLocal() as session:
+            await _cleanup(session, ids["users"], ids["items"])
+
+
+@pytest.mark.asyncio
 async def test_location_params_validated_together():
     """7.4: latitude without longitude is a 400."""
     uid = uuid.uuid4().hex[:8]

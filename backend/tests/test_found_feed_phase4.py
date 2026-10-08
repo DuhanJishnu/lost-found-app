@@ -298,6 +298,42 @@ async def test_feed_image_visibility_threshold():
 
 
 @pytest.mark.asyncio
+async def test_feed_items_carry_created_at():
+    """Stitch screen 1: feed responses include created_at for time-ago
+    labels and newest-first sorting."""
+    uid = uuid.uuid4().hex[:8]
+    async with AsyncSessionLocal() as session:
+        owner, finder = await _make_owner_finder(session, uid)
+        lost = await _add_item(
+            session, owner.id, ItemType.LOST, f"Lost {uid}",
+            "Electronics", vector=E1,
+        )
+        found = await _add_item(
+            session, finder.id, ItemType.FOUND, f"Found {uid}",
+            "Electronics", vector=E1,
+        )
+        user_ids = [owner.id, finder.id]
+        item_ids = [lost.id, found.id]
+
+    try:
+        async with AsyncSessionLocal() as session:
+            feed = await FoundFeedService(session).get_feed(
+                owner.id, search=uid
+            )
+            assert [f.id for f in feed] == [found.id]
+            assert feed[0].created_at is not None
+
+            detail = await FoundFeedService(session).get_item_detail(
+                item_id=found.id, user_id=owner.id
+            )
+            assert detail is not None
+            assert detail.created_at is not None
+    finally:
+        async with AsyncSessionLocal() as session:
+            await _cleanup(session, user_ids, item_ids)
+
+
+@pytest.mark.asyncio
 async def test_feed_empty_without_lost_items():
     """User with no active LOST items gets an empty feed."""
     uid = uuid.uuid4().hex[:8]
