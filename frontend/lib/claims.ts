@@ -26,6 +26,30 @@ export interface CreatedClaim {
   status: string;
 }
 
+export async function updateMatchStatus(
+  matchId: number,
+  status: "CONFIRMED" | "REJECTED",
+): Promise<import("@/types/match").MatchResponse> {
+  const response = await fetch(`/api/matches/${matchId}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    const detail = error?.detail ?? error?.error;
+
+    throw new Error(
+      typeof detail === "string" ? detail : "Unable to update match",
+    );
+  }
+
+  return response.json();
+}
+
 function extractError(data: unknown, fallback: string): string {
   const detail =
     typeof data === "object" && data !== null
