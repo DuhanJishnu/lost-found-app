@@ -5,14 +5,32 @@ export async function backendFetch(
   options: RequestInit = {},
 ) {
   const session = await auth();
-  
 
-  if (!session?.user?.googleId) {
+  const googleId = session?.user?.googleId;
+  const userId = session?.user?.userId;
+
+  if (!googleId && !userId) {
     throw new Error("Not authenticated");
   }
 
+  // Google sessions exchange identity for a token; credentials sessions
+  // mint one directly for the stored user id. Both stay server-side.
+  const tokenRequest = googleId
+    ? {
+        url: `${process.env.BACKEND_URL}/auth/google`,
+        body: {
+          google_id: googleId,
+          name: session!.user.name,
+          email: session!.user.email,
+        },
+      }
+    : {
+        url: `${process.env.BACKEND_URL}/auth/token`,
+        body: { user_id: Number(userId) },
+      };
+
   const tokenResponse = await fetch(
-    `${process.env.BACKEND_URL}/auth/google`,
+    tokenRequest.url,
     {
       method: "POST",
       headers: {
@@ -20,15 +38,11 @@ export async function backendFetch(
         "X-Internal-Secret":
           process.env.INTERNAL_API_SECRET!,
       },
-      body: JSON.stringify({
-        google_id: session.user.googleId,
-        name: session.user.name,
-        email: session.user.email,
-      }),
+      body: JSON.stringify(tokenRequest.body),
       cache: "no-store",
     },
   );
-  
+
   if (!tokenResponse.ok) {
     throw new Error(
       "Backend authentication failed",
@@ -36,7 +50,7 @@ export async function backendFetch(
   }
 
   const { access_token } = await tokenResponse.json();
-  
+
   const headers = new Headers(options.headers);
 
   headers.set(
