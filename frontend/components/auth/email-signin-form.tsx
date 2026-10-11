@@ -103,15 +103,20 @@ export function EmailSignInForm() {
         </div>
       </div>
 
-      <label className="flex cursor-pointer items-center gap-3 text-sm text-muted-foreground select-none">
-        <input
-          type="checkbox"
-          checked={remember}
-          onChange={(event) => setRemember(event.target.checked)}
-          className="h-5 w-5 rounded accent-primary"
-        />
-        Remember this device
-      </label>
+      <div className="flex items-center justify-between gap-3">
+        <label className="flex cursor-pointer items-center gap-3 text-sm text-muted-foreground select-none">
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(event) => setRemember(event.target.checked)}
+            className="h-5 w-5 rounded accent-primary"
+          />
+          Remember this device
+        </label>
+        <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+          Safe Session
+        </span>
+      </div>
 
       <FormError message={error} />
 

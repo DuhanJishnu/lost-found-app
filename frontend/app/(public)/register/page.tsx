@@ -73,6 +73,9 @@ export default async function RegisterPage() {
           <h1 className="hidden font-display text-2xl font-medium tracking-tight lg:block">
             Create Account
           </h1>
+          <p className="hidden text-sm text-muted-foreground lg:block">
+            Instant onboarding with verified security credentials.
+          </p>
 
           <GoogleButton />
 

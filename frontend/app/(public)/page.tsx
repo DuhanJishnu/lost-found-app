@@ -14,7 +14,7 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { GoogleButton } from "@/components/auth/google-button";
-import { LandingDesktopSections } from "@/components/landing/desktop-sections";
+import { DesktopLanding } from "@/components/landing/desktop-landing";
 import { LinkButton } from "@/components/ui/link-button";
 
 const FEATURES = [
@@ -47,7 +47,8 @@ export default async function Home() {
 
   return (
     <main className="mx-auto w-full max-w-md px-4 pt-8 pb-16 lg:max-w-6xl lg:pt-14">
-      <div className="relative flex flex-col items-center">
+      {/* Mobile variant — Stitch mobile landing */}
+      <div className="relative flex flex-col items-center lg:hidden">
         <div className="pointer-events-none absolute -top-12 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
 
         {/* Brand header */}
@@ -158,22 +159,13 @@ export default async function Home() {
 
         {/* Actions */}
         <div className="flex w-full flex-col items-center gap-2 lg:mx-auto lg:max-w-md">
-          <div className="flex w-full flex-col gap-2 lg:flex-row">
-            <LinkButton
-              href="/register"
-              className="h-12 w-full rounded-xl text-sm font-semibold"
-            >
-              Get Started
-              <ArrowRight className="h-[18px] w-[18px]" />
-            </LinkButton>
-            <LinkButton
-              href="/found"
-              variant="outline"
-              className="hidden h-12 w-full rounded-xl text-sm font-semibold lg:inline-flex"
-            >
-              Explore Active Feed
-            </LinkButton>
-          </div>
+          <LinkButton
+            href="/register"
+            className="h-12 w-full rounded-xl text-sm font-semibold"
+          >
+            Get Started
+            <ArrowRight className="h-[18px] w-[18px]" />
+          </LinkButton>
           <GoogleButton />
           <p className="flex min-h-11 items-center gap-1 py-1 text-sm text-muted-foreground">
             Already have an account?
@@ -186,15 +178,15 @@ export default async function Home() {
           </p>
         </div>
 
-        <LandingDesktopSections />
-
-        <footer className="mt-6 text-center lg:hidden">
+        <footer className="mt-6 text-center">
           <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
             <Lock className="h-3.5 w-3.5 text-primary" />
             Encrypted &amp; Community-verified
           </p>
         </footer>
       </div>
+
+      <DesktopLanding />
     </main>
   );
 }

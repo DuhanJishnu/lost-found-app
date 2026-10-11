@@ -54,12 +54,15 @@ export default async function LoginPage() {
           <h1 className="hidden font-display text-2xl font-medium tracking-tight lg:block">
             Sign In
           </h1>
+          <p className="hidden text-sm text-muted-foreground lg:block">
+            Choose your preferred access protocol to decrypt your registry.
+          </p>
 
           <GoogleButton />
 
           <div className="relative flex items-center justify-center">
             <div className="h-px w-full bg-border" />
-            <span className="absolute bg-background px-3 text-xs text-muted-foreground lg:bg-card">
+            <span className="absolute bg-background px-3 text-[11px] font-semibold tracking-widest text-muted-foreground uppercase lg:bg-card">
               or sign in with email
             </span>
           </div>
