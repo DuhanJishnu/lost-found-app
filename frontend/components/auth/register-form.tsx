@@ -70,7 +70,7 @@ export function RegisterForm() {
     <div className="flex flex-col gap-4">
       <div className="relative flex items-center justify-center">
         <div className="h-px w-full bg-border" />
-        <span className="absolute bg-background px-3 text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
+        <span className="absolute bg-background px-3 text-[11px] font-semibold tracking-widest text-muted-foreground uppercase lg:bg-card">
           or register with details
         </span>
       </div>

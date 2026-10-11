@@ -14,6 +14,7 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { GoogleButton } from "@/components/auth/google-button";
+import { LandingDesktopSections } from "@/components/landing/desktop-sections";
 import { LinkButton } from "@/components/ui/link-button";
 
 const FEATURES = [
@@ -45,7 +46,7 @@ export default async function Home() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-md px-4 pt-8 pb-16">
+    <main className="mx-auto w-full max-w-md px-4 pt-8 pb-16 lg:max-w-6xl lg:pt-14">
       <div className="relative flex flex-col items-center">
         <div className="pointer-events-none absolute -top-12 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
 
@@ -65,8 +66,8 @@ export default async function Home() {
         </header>
 
         {/* Headline */}
-        <div className="relative z-10 mb-5 w-full max-w-sm text-center">
-          <h1 className="font-display text-4xl leading-tight font-normal tracking-tight">
+        <div className="relative z-10 mb-5 w-full max-w-sm text-center lg:mb-8 lg:max-w-3xl">
+          <h1 className="font-display text-4xl leading-tight font-normal tracking-tight lg:text-6xl">
             Every lost item has a{" "}
             <span className="font-display text-primary italic">
               way back home.
@@ -82,7 +83,7 @@ export default async function Home() {
         {/* Live telemetry showcase */}
         <section
           aria-label="Live Match Telemetry"
-          className="relative mb-5 w-full overflow-hidden rounded-xl border border-border bg-card p-4"
+          className="relative mb-5 w-full overflow-hidden rounded-xl border border-border bg-card p-4 lg:mx-auto lg:mb-10 lg:max-w-2xl lg:p-6"
         >
           <div className="pointer-events-none absolute top-0 right-0 h-32 w-32 rounded-full bg-primary/5 blur-2xl" />
           <div className="mb-3 flex items-center justify-between">
@@ -136,7 +137,7 @@ export default async function Home() {
         </section>
 
         {/* Value props */}
-        <div className="mb-8 flex w-full flex-col gap-2">
+        <div className="mb-8 flex w-full flex-col gap-2 lg:mb-10 lg:grid lg:grid-cols-3 lg:gap-4">
           {FEATURES.map((feature) => (
             <div
               key={feature.title}
@@ -156,14 +157,23 @@ export default async function Home() {
         </div>
 
         {/* Actions */}
-        <div className="flex w-full flex-col items-center gap-2">
-          <LinkButton
-            href="/register"
-            className="h-12 w-full rounded-xl text-sm font-semibold"
-          >
-            Get Started
-            <ArrowRight className="h-[18px] w-[18px]" />
-          </LinkButton>
+        <div className="flex w-full flex-col items-center gap-2 lg:mx-auto lg:max-w-md">
+          <div className="flex w-full flex-col gap-2 lg:flex-row">
+            <LinkButton
+              href="/register"
+              className="h-12 w-full rounded-xl text-sm font-semibold"
+            >
+              Get Started
+              <ArrowRight className="h-[18px] w-[18px]" />
+            </LinkButton>
+            <LinkButton
+              href="/found"
+              variant="outline"
+              className="hidden h-12 w-full rounded-xl text-sm font-semibold lg:inline-flex"
+            >
+              Explore Active Feed
+            </LinkButton>
+          </div>
           <GoogleButton />
           <p className="flex min-h-11 items-center gap-1 py-1 text-sm text-muted-foreground">
             Already have an account?
@@ -176,7 +186,9 @@ export default async function Home() {
           </p>
         </div>
 
-        <footer className="mt-6 text-center">
+        <LandingDesktopSections />
+
+        <footer className="mt-6 text-center lg:hidden">
           <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
             <Lock className="h-3.5 w-3.5 text-primary" />
             Encrypted &amp; Community-verified
