@@ -47,12 +47,14 @@ class UserRepository:
     async def create(
         self,
         *,
-        google_id: str,
         name: str,
         email: str,
+        google_id: str | None = None,
+        password_hash: str | None = None,
     ) -> User:
         user = User(
             google_id=google_id,
+            password_hash=password_hash,
             name=name,
             email=email,
         )
