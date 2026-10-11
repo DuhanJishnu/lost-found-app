@@ -116,8 +116,13 @@ export function MatchesInbox({
   const strongCount = signals.filter((signal) => signal.strong).length;
 
   return (
-    <div className="flex flex-col gap-6">
-      <Card className="gap-0 overflow-hidden py-0">
+    <div className="flex flex-col gap-6 lg:grid lg:grid-cols-12 lg:items-start">
+      <Card
+        className={cn(
+          "gap-0 overflow-hidden py-0 lg:order-2",
+          matches.length > 1 ? "lg:col-span-8" : "lg:col-span-12",
+        )}
+      >
         <div className="flex items-center justify-between p-4 pb-3">
           <p className="flex items-center gap-1.5 font-bold text-primary">
             <Radar className="h-5 w-5" />
@@ -177,6 +182,14 @@ export function MatchesInbox({
 
           <FormError message={error} />
 
+          {isPending && (
+            <p className="hidden items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs leading-relaxed text-muted-foreground lg:flex">
+              <ShieldCheck className="h-4 w-4 flex-shrink-0 text-primary" />
+              Safe handover requires mutual claim verification before any
+              physical rendezvous is scheduled.
+            </p>
+          )}
+
           {isPending && isLostOwner && (
             <div className="flex gap-3">
               <button
@@ -228,10 +241,10 @@ export function MatchesInbox({
       </Card>
 
       {matches.length > 1 && (
-        <section>
+        <section className="lg:order-1 lg:col-span-4">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-xs tracking-wider text-muted-foreground uppercase">
-              Incoming queue
+              Candidate queue
             </h2>
             <p className="text-xs text-muted-foreground">
               Sorted by confidence

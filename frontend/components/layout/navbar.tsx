@@ -21,6 +21,7 @@ import {
 const LINKS: NavbarLink[] = [
   { href: "/dashboard", label: "My items" },
   { href: "/found", label: "Found items" },
+  { href: "/matches", label: "Matches" },
 ];
 
 const REPORT_HREF = "/items/new";

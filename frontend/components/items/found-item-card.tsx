@@ -76,8 +76,10 @@ export function FoundItemCard({ item }: { item: FoundFeedItem }) {
         </div>
 
         <div className="flex items-center justify-between pt-1.5">
-          <span className="text-xs text-muted-foreground">
+          <span className="truncate text-xs text-muted-foreground">
             {timeAgo(item.created_at)}
+            {item.distance_km !== null &&
+              ` · ${item.distance_km < 1 ? `${Math.round(item.distance_km * 1000)} m away` : `${item.distance_km.toFixed(1)} km away`}`}
           </span>
 
           <Link

@@ -3,7 +3,7 @@ import { ItemForm } from "@/components/items/item-form";
 
 export default function NewItemPage() {
   return (
-    <PageShell width="sm">
+    <PageShell width="md">
       <ItemForm />
     </PageShell>
   );

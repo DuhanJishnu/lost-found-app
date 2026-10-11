@@ -57,7 +57,7 @@ export default async function MatchesPage({
   );
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 pb-24 sm:px-6 md:pb-14">
+    <main className="mx-auto w-full max-w-3xl px-4 pb-24 sm:px-6 md:pb-14 lg:max-w-6xl">
       <div className="mt-4 flex rounded-full bg-muted p-1">
         {TABS.map((entry) => (
           <Link

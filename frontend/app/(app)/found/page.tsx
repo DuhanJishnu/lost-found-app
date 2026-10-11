@@ -7,6 +7,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { FoundItemCard } from "@/components/items/found-item-card";
 import { CategoryChips } from "@/components/found/category-chips";
 import { FeedSearch } from "@/components/found/feed-search";
+import { FeedSidebar } from "@/components/found/feed-sidebar";
 import { LocationRow } from "@/components/found/location-row";
 import { cn } from "@/lib/utils";
 
@@ -65,12 +66,36 @@ export default async function FoundPage({ searchParams }: FoundPageProps) {
   if (params.longitude) keptParams.longitude = params.longitude;
   if (params.radius_km) keptParams.radius_km = params.radius_km;
 
+  const topScore =
+    items.length > 0
+      ? Math.round(
+          Math.max(...items.map((item) => item.similarity_score)) * 100,
+        )
+      : null;
+  const topTitle =
+    items.length > 0
+      ? (items.find(
+          (item) =>
+            Math.round(item.similarity_score * 100) === topScore,
+        )?.title ?? null)
+      : null;
+
   return (
     <main className="mx-auto w-full max-w-6xl px-4 pb-24 sm:px-6 md:pb-14">
       <div className="sticky top-16 z-30 -mx-4 bg-background/95 px-4 pt-2 pb-3 backdrop-blur-md sm:-mx-6 sm:px-6 md:top-16">
-        <div className="flex flex-col gap-3">
-          <FeedSearch />
-          <LocationRow />
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="flex-1">
+            <FeedSearch />
+          </div>
+          <div className="flex items-center gap-3">
+            <LocationRow />
+            <span className="hidden items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 xl:flex">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+              <span className="text-[11px] tracking-wider text-muted-foreground uppercase">
+                Telemetry sync: Real-time
+              </span>
+            </span>
+          </div>
         </div>
       </div>
 
@@ -79,42 +104,52 @@ export default async function FoundPage({ searchParams }: FoundPageProps) {
         baseParams={keptParams}
       />
 
-      <div className="mt-6 flex items-center justify-between">
-        <div className="flex items-baseline gap-2">
-          <h1 className="font-display text-2xl sm:text-3xl">
-            Recent discoveries
-          </h1>
-          <span className="text-sm font-bold text-primary">
-            ({items.length})
-          </span>
-        </div>
+      <div className="mt-6 flex gap-6">
+        <FeedSidebar
+          topScore={topScore}
+          topTitle={topTitle}
+          totalCount={items.length}
+        />
 
-        <Link
-          href={sortHref(sort === "newest" ? "match" : "newest")}
-          className={cn(
-            "inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground",
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between">
+            <div className="flex items-baseline gap-2">
+              <h1 className="font-display text-2xl sm:text-3xl">
+                Recent discoveries
+              </h1>
+              <span className="text-sm font-bold text-primary">
+                ({items.length})
+              </span>
+            </div>
+
+            <Link
+              href={sortHref(sort === "newest" ? "match" : "newest")}
+              className={cn(
+                "inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground",
+              )}
+            >
+              <span className="hidden lg:inline">Sort by:</span> {sort === "newest" ? "Newest" : "Best match"}
+              <ArrowUpDown className="h-4 w-4" />
+            </Link>
+          </div>
+
+          {items.length === 0 ? (
+            <div className="mt-6">
+              <EmptyState
+                title="No found items yet"
+                description="Try clearing your search or report a lost item so matching found items show up here."
+                action={<LinkButton href="/items/new">Report lost item</LinkButton>}
+              />
+            </div>
+          ) : (
+            <div className="mt-4 grid w-full grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3">
+              {items.map((item) => (
+                <FoundItemCard key={item.id} item={item} />
+              ))}
+            </div>
           )}
-        >
-          Sort: {sort === "newest" ? "Newest" : "Best match"}
-          <ArrowUpDown className="h-4 w-4" />
-        </Link>
+        </div>
       </div>
-
-      {items.length === 0 ? (
-        <div className="mt-6">
-          <EmptyState
-            title="No found items yet"
-            description="Try clearing your search or report a lost item so matching found items show up here."
-            action={<LinkButton href="/items/new">Report lost item</LinkButton>}
-          />
-        </div>
-      ) : (
-        <div className="mt-4 grid w-full grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
-          {items.map((item) => (
-            <FoundItemCard key={item.id} item={item} />
-          ))}
-        </div>
-      )}
 
       <section className="mt-8 flex items-center justify-between gap-3 rounded-xl bg-muted p-4 shadow-md">
         <div className="flex min-w-0 items-center gap-3">

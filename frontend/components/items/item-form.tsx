@@ -75,6 +75,15 @@ export function ItemForm() {
   const dateLabel =
     type === "LOST" ? "Date & time lost (optional)" : "Date & time found (optional)";
 
+  function fillOccurredNow() {
+    const now = new Date();
+    const pad = (value: number) => String(value).padStart(2, "0");
+    setOccurredAt(
+      `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
+        `T${pad(now.getHours())}:${pad(now.getMinutes())}`,
+    );
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -224,62 +233,85 @@ export function ItemForm() {
                 </Button>
               </div>
 
-              <FormField label="Item title" htmlFor="title">
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Black iPhone 15"
-                  minLength={2}
-                  maxLength={200}
-                  required
-                />
-              </FormField>
+              <div className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
+                <div className="space-y-6">
+                  <FormField label="Item title" htmlFor="title">
+                    <Input
+                      id="title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="e.g. Black iPhone 15"
+                      minLength={2}
+                      maxLength={200}
+                      required
+                    />
+                  </FormField>
 
-              <FormField label="Category" htmlFor="category">
-                <select
-                  id="category"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  required
-                  className="h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm [&>option]:bg-popover"
-                >
-                  <option value="" disabled>
-                    Select a category…
-                  </option>
-                  {CATEGORIES.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
+                  <FormField label="Category" htmlFor="category">
+                    <select
+                      id="category"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      required
+                      className="h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm [&>option]:bg-popover"
+                    >
+                      <option value="" disabled>
+                        Select a category…
+                      </option>
+                      {CATEGORIES.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </FormField>
 
-              <FormField label={dateLabel} htmlFor="occurred-at">
-                <Input
-                  id="occurred-at"
-                  type="datetime-local"
-                  value={occurredAt}
-                  onChange={(e) => setOccurredAt(e.target.value)}
-                />
-              </FormField>
+                  <FormField label={dateLabel} htmlFor="occurred-at">
+                    <div className="flex gap-2">
+                      <Input
+                        id="occurred-at"
+                        type="datetime-local"
+                        value={occurredAt}
+                        onChange={(e) => setOccurredAt(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={fillOccurredNow}
+                        className="flex-shrink-0"
+                      >
+                        Now
+                      </Button>
+                    </div>
+                  </FormField>
 
-              <FormField label="Distinguishing details" htmlFor="description">
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Colour, brand, marks, where and when…"
-                  className="min-h-32"
-                  minLength={5}
-                  maxLength={5000}
-                  required
-                />
-              </FormField>
+                  <FormField label="Distinguishing details" htmlFor="description">
+                    <Textarea
+                      id="description"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Colour, brand, marks, where and when…"
+                      className="min-h-32"
+                      minLength={5}
+                      maxLength={5000}
+                      required
+                    />
+                  </FormField>
+                </div>
 
-              <FormField label="Photographic evidence (optional, highly recommended)">
-                <ImageUploader photos={photos} onChange={setPhotos} />
-              </FormField>
+                <div className="space-y-6">
+                  <FormField label="Photographic evidence (optional, highly recommended)">
+                    <ImageUploader photos={photos} onChange={setPhotos} />
+                  </FormField>
+
+                  <p className="hidden rounded-xl bg-muted p-4 text-sm leading-relaxed text-muted-foreground lg:block">
+                    Forensic anchors — serials, stickers, scuffs — are
+                    weighted heavily by the match engine before alerts reach
+                    community stewards.
+                  </p>
+                </div>
+              </div>
 
               <div className="flex gap-3">
                 <Button
