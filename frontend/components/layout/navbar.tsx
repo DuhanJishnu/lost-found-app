@@ -17,6 +17,7 @@ import {
   NavbarMobileMenu,
   type NavbarLink,
 } from "./navbar-mobile-menu";
+import { NavbarSearch } from "./navbar-search";
 
 const LINKS: NavbarLink[] = [
   { href: "/dashboard", label: "My items" },
@@ -65,6 +66,8 @@ export async function Navbar() {
           ))}
         </nav>
 
+        <NavbarSearch />
+
         <div className="hidden items-center gap-3 md:flex">
           <LinkButton href={REPORT_HREF}>Report item</LinkButton>
 
@@ -75,7 +78,11 @@ export async function Navbar() {
                 initialItems={initialItems}
               />
 
-              <span className="flex items-center gap-2">
+              <Link
+                href="/profile"
+                aria-label="Your profile"
+                className="flex items-center gap-2 rounded-full transition-colors hover:bg-muted"
+              >
                 <Avatar size="sm">
                   {user.image && <AvatarImage src={user.image} alt="" />}
                   <AvatarFallback>
@@ -88,7 +95,7 @@ export async function Navbar() {
                     {user.name}
                   </span>
                 )}
-              </span>
+              </Link>
 
               <form action={signOutEverywhere}>
                 <Button type="submit" variant="outline" size="sm">
