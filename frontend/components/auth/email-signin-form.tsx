@@ -54,7 +54,7 @@ export function EmailSignInForm() {
             name="email"
             type="email"
             autoComplete="email"
-            placeholder="alex@example.com"
+            placeholder="mail@example.com"
             required
             className="h-12 rounded-xl pl-10"
           />
@@ -64,16 +64,6 @@ export function EmailSignInForm() {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label htmlFor="signin-password">Password</Label>
-          <Button
-            type="button"
-            variant="link"
-            size="sm"
-            disabled
-            title="Password reset is not available yet"
-          >
-            Forgot password?
-            <ComingSoonBadge />
-          </Button>
         </div>
         <div className="relative">
           <Lock className="pointer-events-none absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
@@ -112,10 +102,7 @@ export function EmailSignInForm() {
             className="h-5 w-5 rounded accent-primary"
           />
           Remember this device
-        </label>
-        <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-          Safe Session
-        </span>
+        </label>  
       </div>
 
       <FormError message={error} />

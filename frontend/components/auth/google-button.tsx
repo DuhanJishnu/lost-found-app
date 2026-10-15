@@ -21,9 +21,9 @@ export function GoogleButton({
       type="button"
       variant="outline"
       onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-      className={cn("h-12 w-full rounded-xl text-sm font-semibold", className)}
+      className={cn("h-12 w-full cursor-pointer rounded-xl text-sm font-semibold hover:text-[#031211] hover:bg-[#E8E4D3]", className)}
     >
-      <GoogleIcon className="h-5 w-5" />
+      <GoogleIcon className="h-5 w-5 mr-2" />
       {label}
     </Button>
   );

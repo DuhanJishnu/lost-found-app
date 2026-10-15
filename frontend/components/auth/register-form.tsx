@@ -85,7 +85,7 @@ export function RegisterForm() {
               name="name"
               type="text"
               autoComplete="name"
-              placeholder="Alex Rivera"
+              placeholder="Name"
               required
               maxLength={100}
               className="h-12 rounded-xl pl-10"
@@ -102,7 +102,7 @@ export function RegisterForm() {
               name="email"
               type="email"
               autoComplete="email"
-              placeholder="alex@example.com"
+              placeholder="mail@example.com"
               required
               maxLength={255}
               className="h-12 rounded-xl pl-10"
@@ -137,7 +137,7 @@ export function RegisterForm() {
               size="icon"
               aria-label={showPassword ? "Hide password" : "Show password"}
               onClick={() => setShowPassword((value) => !value)}
-              className="absolute top-1/2 right-1 h-10 w-10 -translate-y-1/2"
+              className="absolute right-2 bottom-1 h-10 w-10"
             >
               {showPassword ? (
                 <EyeOff className="h-5 w-5" />
@@ -157,12 +157,12 @@ export function RegisterForm() {
               />
             ))}
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground p-2">
             Use 10+ characters with symbols and numerals.
           </p>
         </div>
 
-        <label className="flex cursor-pointer items-start gap-3 text-xs leading-relaxed text-muted-foreground select-none">
+        <label className="flex items-center cursor-pointer   gap-3 text-xs leading-relaxed text-muted-foreground select-none">
           <input
             type="checkbox"
             required

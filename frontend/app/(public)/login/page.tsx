@@ -39,10 +39,6 @@ export default async function LoginPage() {
         <div className="flex flex-col gap-5">
           {/* Mobile header — hidden on desktop, the split panel covers it */}
           <div className="flex flex-col gap-2 pt-2 lg:hidden">
-            <p className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-primary uppercase">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
-              Recovery Registry Telemetry
-            </p>
             <h1 className="font-display text-3xl font-medium tracking-tight">
               Welcome back
             </h1>
@@ -55,7 +51,7 @@ export default async function LoginPage() {
             Sign In
           </h1>
           <p className="hidden text-sm text-muted-foreground lg:block">
-            Choose your preferred access protocol to decrypt your registry.
+            Login to access your account
           </p>
 
           <GoogleButton />
@@ -68,22 +64,6 @@ export default async function LoginPage() {
           </div>
 
           <EmailSignInForm />
-
-          {/* Trust card */}
-          <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-4 lg:bg-muted/40">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-primary">
-              <BadgeCheck className="h-[18px] w-[18px]" />
-            </span>
-            <span className="flex min-w-0 flex-col">
-              <p className="truncate text-xs font-semibold">
-                Community Custody Network
-              </p>
-              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                End-to-end telemetry locks personal contact info until item
-                visual proof is matched.
-              </p>
-            </span>
-          </div>
 
           <p className="pt-2 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?
