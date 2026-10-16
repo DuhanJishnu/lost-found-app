@@ -52,17 +52,6 @@ export function FeedSidebar({
             </div>
           </div>
         )}
-
-        <div className="rounded-xl border border-border bg-card p-4">
-          <p className="flex items-center gap-1.5 text-xs font-semibold">
-            <Lock className="h-4 w-4 text-primary" />
-            Privacy Protocol
-          </p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Items under the confidence threshold auto-redact photos and
-            identifiers. {totalCount} verified signals in view.
-          </p>
-        </div>
       </div>
     </aside>
   );

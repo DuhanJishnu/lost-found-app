@@ -89,12 +89,6 @@ export default async function FoundPage({ searchParams }: FoundPageProps) {
           </div>
           <div className="flex items-center gap-3">
             <LocationRow />
-            <span className="hidden items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 xl:flex">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-              <span className="text-[11px] tracking-wider text-muted-foreground uppercase">
-                Telemetry sync: Real-time
-              </span>
-            </span>
           </div>
         </div>
       </div>

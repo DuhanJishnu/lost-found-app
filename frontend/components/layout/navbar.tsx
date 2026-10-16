@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LogOut } from "lucide-react";
 
 import { auth } from "@/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,7 +18,9 @@ import {
   NavbarMobileMenu,
   type NavbarLink,
 } from "./navbar-mobile-menu";
+import { NavbarLinks } from "./navbar-links";
 import { NavbarSearch } from "./navbar-search";
+import Image from "next/image";
 
 const LINKS: NavbarLink[] = [
   { href: "/dashboard", label: "My items" },
@@ -49,26 +52,25 @@ export async function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 hidden border-b border-border bg-background/95 backdrop-blur md:block">
-      <div className="relative mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-        <Link href="/" className="font-display text-xl font-semibold">
-          Lost<span className="text-primary"> & </span>Found
-        </Link>
+      <div className="relative mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6">
+        {/* Left: brand + primary navigation */}
+        <div className="flex shrink-0 items-center gap-6">
+          <Image 
+            src="/clover-light.webp"
+            alt="logo"
+            width={50}
+            height={50}  
+          />
+          <NavbarLinks links={LINKS} />
+        </div>
 
-        <nav className="hidden items-center gap-1 md:flex">
-          {LINKS.map((link) => (
-            <LinkButton
-              key={link.href}
-              href={link.href}
-              variant="ghost"
-            >
-              {link.label}
-            </LinkButton>
-          ))}
-        </nav>
+        {/* Middle: search takes the free space */}
+        <div className="mx-auto hidden w-full max-w-sm min-w-0 flex-1 lg:block">
+          <NavbarSearch />
+        </div>
 
-        <NavbarSearch />
-
-        <div className="hidden items-center gap-3 md:flex">
+        {/* Right: action, then account */}
+        <div className="ml-auto flex shrink-0 items-center gap-2 lg:ml-0">
           <LinkButton href={REPORT_HREF}>Report item</LinkButton>
 
           {user ? (
@@ -78,10 +80,12 @@ export async function Navbar() {
                 initialItems={initialItems}
               />
 
+              <span aria-hidden className="mx-1 h-6 w-px bg-border" />
+
               <Link
                 href="/profile"
                 aria-label="Your profile"
-                className="flex items-center gap-2 rounded-full transition-colors hover:bg-muted"
+                className="flex items-center gap-2 rounded-full py-0.5 pr-2 transition-colors hover:bg-muted"
               >
                 <Avatar size="sm">
                   {user.image && <AvatarImage src={user.image} alt="" />}
@@ -89,23 +93,28 @@ export async function Navbar() {
                     {(user.name ?? user.email ?? "?").charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-
                 {user.name && (
-                  <span className="max-w-32 truncate text-sm font-medium">
+                  <span className="hidden max-w-28 truncate text-sm font-medium xl:block">
                     {user.name}
                   </span>
                 )}
               </Link>
 
               <form action={signOutEverywhere}>
-                <Button type="submit" variant="outline" size="sm">
-                  Sign out
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Sign out"
+                  title="Sign out"
+                >
+                  <LogOut className="h-4 w-4" />
                 </Button>
               </form>
             </>
           ) : (
             <form action={signInWithGoogle}>
-              <Button type="submit" size="sm">
+              <Button type="submit" variant="outline">
                 Sign in
               </Button>
             </form>

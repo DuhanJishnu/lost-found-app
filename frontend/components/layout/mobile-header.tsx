@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
+import Image from "next/image";
 
 import { auth } from "@/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -32,13 +32,12 @@ export async function MobileHeader() {
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur md:hidden">
       <div className="flex h-16 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <Search className="h-4 w-4" />
-          </span>
-
-          <span className="font-display text-lg font-semibold tracking-tight">
-            Lost & Found
-          </span>
+          <Image 
+            src="/clover-light.webp"
+            alt="logo"
+            width={32}
+            height={32}
+          />
         </Link>
 
         <div className="flex items-center gap-1">

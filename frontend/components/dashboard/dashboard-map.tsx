@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import L from "leaflet";
 import { LocateFixed } from "lucide-react";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
@@ -27,6 +27,7 @@ interface DashboardMapProps {
 const PIN_COLORS = {
   LOST: "#00aebb",
   FOUND: "#e8e4d3",
+  CURRENT_LOCATION: "#ef4444",
 } as const;
 
 function dotIcon(kind: "LOST" | "FOUND") {
@@ -39,25 +40,50 @@ function dotIcon(kind: "LOST" | "FOUND") {
   });
 }
 
-function FitBounds({ pins }: { pins: MapPin[] }) {
+function currentLocationIcon() {
+  const color = PIN_COLORS.CURRENT_LOCATION;
+  return L.divIcon({
+    className: "lf-map-pin",
+    html: `<span style="display:block;width:18px;height:18px;border-radius:9999px;background:${color};border:3px solid #fff;box-shadow:0 0 0 4px ${color}55,0 2px 8px rgba(0,0,0,.5)"></span>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  });
+}
+
+function FitBounds({
+  pins,
+  location,
+}: {
+  pins: MapPin[];
+  location: [number, number] | null;
+}) {
   const map = useMap();
 
-  useMemo(() => {
-    if (pins.length > 0) {
-      map.fitBounds(
-        L.latLngBounds(pins.map((pin) => [pin.latitude, pin.longitude])),
-        { padding: [32, 32] },
-      );
+  useEffect(() => {
+    if (!location) {
+      return;
     }
-  }, [map, pins]);
+
+    const locations = pins.map((pin) => L.latLng(pin.latitude, pin.longitude));
+    locations.push(L.latLng(location[0], location[1]));
+
+    if (locations.length > 0) {
+      map.fitBounds(L.latLngBounds(locations), {
+        padding: [32, 32],
+        maxZoom: 14,
+      });
+    }
+  }, [location, map, pins]);
 
   return null;
 }
 
 function LocateControl({
   onLocate,
+  onLocateError,
 }: {
   onLocate: (latitude: number, longitude: number) => void;
+  onLocateError: (message: string) => void;
 }) {
   const map = useMap();
   return (
@@ -67,10 +93,13 @@ function LocateControl({
       variant="outline"
       className="absolute top-3 right-3 z-[500] bg-card/90 backdrop-blur"
       onClick={() => {
-        map.locate({ setView: true, maxZoom: 14 });
         map.once("locationfound", (event: L.LocationEvent) => {
           onLocate(event.latlng.lat, event.latlng.lng);
         });
+        map.once("locationerror", (event: L.ErrorEvent) => {
+          onLocateError(event.message);
+        });
+        map.locate({ setView: true, maxZoom: 14 });
       }}
     >
       <LocateFixed className="h-4 w-4" />
@@ -81,12 +110,16 @@ function LocateControl({
 
 export function DashboardMap({ pins }: DashboardMapProps) {
   const [nearby, setNearby] = useState<MapPin[]>([]);
+  const [currentLocation, setCurrentLocation] = useState<[number, number] | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
 
   const allPins = useMemo(() => [...pins, ...nearby], [pins, nearby]);
 
   async function handleLocate(latitude: number, longitude: number) {
+    setCurrentLocation([latitude, longitude]);
     setLoading(true);
     setNotice("");
 
@@ -141,15 +174,20 @@ export function DashboardMap({ pins }: DashboardMapProps) {
     <div>
       <div className="relative">
         <MapContainer
-          center={[37.7749, -122.4194]}
-          zoom={12}
+          center={[22, 79]}
+          zoom={5}
           scrollWheelZoom={false}
           attributionControl={false}
           className="z-0 h-72 w-full rounded-xl border border-border"
         >
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-          <FitBounds pins={allPins} />
-          <LocateControl onLocate={handleLocate} />
+          <FitBounds pins={allPins} location={currentLocation} />
+          <LocateControl
+            onLocate={handleLocate}
+            onLocateError={(message) =>
+              setNotice(message || "Could not determine your location.")
+            }
+          />
           {allPins.map((pin) => (
             <Marker
               key={pin.id}
@@ -170,12 +208,22 @@ export function DashboardMap({ pins }: DashboardMapProps) {
               </Popup>
             </Marker>
           ))}
+          {currentLocation && (
+            <Marker
+              position={currentLocation}
+              icon={currentLocationIcon()}
+              title="Your current location"
+              zIndexOffset={1000}
+            >
+              <Popup>Your current location</Popup>
+            </Marker>
+          )}
         </MapContainer>
 
         {loading && (
           <span className="absolute bottom-3 left-3 flex items-center gap-2 rounded-full bg-card/90 px-3 py-1 text-xs backdrop-blur">
             <Spinner className="h-3.5 w-3.5" />
-            Scanning nearby…
+            Pivoting…
           </span>
         )}
       </div>
@@ -183,7 +231,7 @@ export function DashboardMap({ pins }: DashboardMapProps) {
       <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <span
-            className="inline-block h-3 w-3 rounded-full"
+            className="inline-block h-3 w-3 rounded-full ml-1.5"
             style={{ background: PIN_COLORS.LOST }}
           />
           Lost ({pins.filter((pin) => pin.kind === "LOST").length})
@@ -195,15 +243,16 @@ export function DashboardMap({ pins }: DashboardMapProps) {
           />
           Found ({pins.filter((pin) => pin.kind === "FOUND").length + nearby.length})
         </span>
+        {currentLocation && (
+          <span className="flex items-center gap-1.5">
+            <span
+              className="inline-block h-3 w-3 rounded-full"
+              style={{ background: PIN_COLORS.CURRENT_LOCATION }}
+            />
+            You
+          </span>
+        )}
       </div>
-
-      {allPins.length === 0 && !loading && (
-        <p className="mt-2 text-sm text-muted-foreground">
-          No pinned reports yet. Report an item with a location, or tap
-          Locate me to scan around you.
-        </p>
-      )}
-
       <FormError message={notice || undefined} />
     </div>
   );
