@@ -30,6 +30,7 @@ type ClaimFilter = "ALL" | "PENDING" | "ACCEPTED" | "REJECTED";
 
 interface Props {
   initialTab: Tab;
+  initialReportFilter: ReportFilter;
   items: Item[];
   matches: MatchResponse[];
   claims: ClaimResponse[];
@@ -75,6 +76,7 @@ function Chips<T extends string>({
 
 export function ProfileContent({
   initialTab,
+  initialReportFilter,
   items,
   matches,
   claims,
@@ -82,7 +84,8 @@ export function ProfileContent({
   userId,
 }: Props) {
   const [tab, setTab] = useState<Tab>(initialTab);
-  const [reportFilter, setReportFilter] = useState<ReportFilter>("ALL");
+  const [reportFilter, setReportFilter] =
+    useState<ReportFilter>(initialReportFilter);
   const [sort, setSort] = useState<ReportSort>("NEW");
   const [claimFilter, setClaimFilter] = useState<ClaimFilter>("ALL");
 

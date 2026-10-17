@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { getItem, getItemImageUrl } from "@/lib/items";
 import type { Item } from "@/types/items";
 
-import { PageShell } from "@/components/layout/page-shell";
 import { ItemDetails } from "@/components/items/item-details";
 
 interface ItemPageProps {
@@ -28,9 +27,5 @@ export default async function ItemPage({ params }: ItemPageProps) {
     notFound();
   }
 
-  return (
-    <PageShell width="md">
-      <ItemDetails item={item} imageUrls={imageUrls} />
-    </PageShell>
-  );
+  return <ItemDetails item={item} imageUrls={imageUrls} />;
 }

@@ -12,7 +12,7 @@ import { getUserProfile } from "@/lib/users";
 import { formatMemberSince } from "@/lib/format";
 
 interface ProfilePageProps {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; type?: string }>;
 }
 
 function SignOut({ className }: { className?: string }) {
@@ -33,6 +33,8 @@ function SignOut({ className }: { className?: string }) {
 export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const params = await searchParams;
   const tab = params.tab === "history" ? "history" : "reports";
+  const reportFilter =
+    params.type === "LOST" || params.type === "FOUND" ? params.type : "ALL";
 
   const [session, profile, items, matches, claims] = await Promise.all([
     auth(),
@@ -116,6 +118,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
 
         <ProfileContent
           initialTab={tab}
+          initialReportFilter={reportFilter}
           items={items}
           matches={matches}
           claims={claims}
