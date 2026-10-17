@@ -86,13 +86,6 @@ export default async function MatchesPage({
         <h1 className="font-display text-3xl sm:text-4xl">
           Detected matches
         </h1>
-
-        <span className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-border px-2.5 py-1">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-          <span className="text-[11px] font-bold tracking-wider text-primary uppercase">
-            Active sync
-          </span>
-        </span>
       </div>
 
       <p className="mt-2 text-muted-foreground">
