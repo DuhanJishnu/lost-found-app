@@ -222,7 +222,7 @@ export function DashboardMap({ pins }: DashboardMapProps) {
 
         {loading && (
           <span className="absolute bottom-3 left-3 flex items-center gap-2 rounded-full bg-card/90 px-3 py-1 text-xs backdrop-blur">
-            <Spinner className="h-3.5 w-3.5" />
+            <Spinner size="sm" />
             Pivoting…
           </span>
         )}

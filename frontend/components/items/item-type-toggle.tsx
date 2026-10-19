@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { ItemType } from "@/types/items";
 
 const options: { value: ItemType; label: string }[] = [
-  { value: "LOST", label: "I lost something" },
-  { value: "FOUND", label: "I found something" },
+  { value: "LOST", label: "Lost something" },
+  { value: "FOUND", label: "Found something" },
 ];
 
 interface ItemTypeToggleProps {
@@ -22,6 +22,7 @@ export function ItemTypeToggle({ value, onChange }: ItemTypeToggleProps) {
           variant={value === option.value ? "default" : "outline"}
           aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}
+          className="p-4 rounded-sm"
         >
           {option.label}
         </Button>

@@ -47,7 +47,6 @@ const CATEGORIES = [
   "Wallets",
   "Bags",
   "IDs & Cards",
-  "Pets",
   "Jewelry",
   "Accessories",
   "Clothing",
@@ -64,6 +63,7 @@ export function ItemForm() {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [occurredAt, setOccurredAt] = useState("");
+  const [nowSelected, setNowSelected] = useState(false);
   const [description, setDescription] = useState("");
 
   const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
@@ -76,12 +76,19 @@ export function ItemForm() {
     type === "LOST" ? "Date & time lost (optional)" : "Date & time found (optional)";
 
   function fillOccurredNow() {
+    if (nowSelected) {
+      setOccurredAt("");
+      setNowSelected(false);
+      return;
+    }
+
     const now = new Date();
     const pad = (value: number) => String(value).padStart(2, "0");
     setOccurredAt(
       `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
         `T${pad(now.getHours())}:${pad(now.getMinutes())}`,
     );
+    setNowSelected(true);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -195,8 +202,7 @@ export function ItemForm() {
             </CardTitle>
 
             <CardDescription>
-              Every detail brings an item closer to home. Quiet precision
-              helps our recognition engine discover matches faster.
+              Be Precise, precision helps our recognition engine discover matches faster.
             </CardDescription>
           </CardHeader>
 
@@ -226,7 +232,7 @@ export function ItemForm() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setStep(1)}
-                  className="flex-shrink-0 text-primary"
+                  className="shrink-0 text-primary"
                 >
                   Edit
                   <Pencil className="h-3.5 w-3.5" />
@@ -272,14 +278,17 @@ export function ItemForm() {
                         id="occurred-at"
                         type="datetime-local"
                         value={occurredAt}
-                        onChange={(e) => setOccurredAt(e.target.value)}
+                        onChange={(e) => {
+                          setOccurredAt(e.target.value);
+                          setNowSelected(false);
+                        }}
                         className="flex-1"
                       />
                       <Button
                         type="button"
                         variant="outline"
                         onClick={fillOccurredNow}
-                        className="flex-shrink-0"
+                        className="shrink-0"
                       >
                         Now
                       </Button>
@@ -291,7 +300,7 @@ export function ItemForm() {
                       id="description"
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Colour, brand, marks, where and when…"
+                      placeholder="Colour, brand, marks etc..."
                       className="min-h-32"
                       minLength={5}
                       maxLength={5000}
@@ -304,12 +313,6 @@ export function ItemForm() {
                   <FormField label="Photographic evidence (optional, highly recommended)">
                     <ImageUploader photos={photos} onChange={setPhotos} />
                   </FormField>
-
-                  <p className="hidden rounded-xl bg-muted p-4 text-sm leading-relaxed text-muted-foreground lg:block">
-                    Forensic anchors — serials, stickers, scuffs — are
-                    weighted heavily by the match engine before alerts reach
-                    community stewards.
-                  </p>
                 </div>
               </div>
 
@@ -373,7 +376,7 @@ export function ItemForm() {
                 >
                   {loading ? (
                     <>
-                      <Spinner />
+                      <Spinner size="sm" />
                       Submitting…
                     </>
                   ) : (

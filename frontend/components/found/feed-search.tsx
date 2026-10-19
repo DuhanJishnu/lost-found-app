@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Input } from "@/components/ui/input";
@@ -38,9 +38,12 @@ export function FeedSearch() {
     return () => clearTimeout(timeout);
   }, [value, activeQuery, router, searchParams]);
 
-  function handleClearFilters() {
+  function handleClearSearch() {
     setValue("");
-    router.replace("/found");
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("q");
+    const query = params.toString();
+    router.replace(`/found${query ? `?${query}` : ""}`);
   }
 
   return (
@@ -57,15 +60,17 @@ export function FeedSearch() {
         />
       </div>
 
-      <button
-        type="button"
-        onClick={handleClearFilters}
-        aria-label="Clear filters"
-        title="Clear filters"
-        className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-muted transition-all hover:text-primary active:scale-95"
-      >
-        <SlidersHorizontal className="h-5 w-5" />
-      </button>
+      {value && (
+        <button
+          type="button"
+          onClick={handleClearSearch}
+          aria-label="Clear search"
+          title="Clear search"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted transition-all hover:text-primary active:scale-95"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      )}
     </div>
   );
 }

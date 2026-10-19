@@ -4,15 +4,21 @@ interface KineticSpinnerProps {
   fullScreen?: boolean;
   accentPink?: string;
   accentWhite?: string;
+  size?: "default" | "sm";
 }
 
 function Spinner({
   fullScreen = false,
   accentPink = "#00AEBB",
   accentWhite = "#e2e7ee",
+  size = "default",
 }: KineticSpinnerProps) {
   return (
-    <div className={`spinner-container ${fullScreen ? "fullscreen" : ""}`} role="status" aria-label="Loading">
+    <div
+      className={`spinner-container ${size} ${fullScreen ? "fullscreen" : ""}`}
+      role="status"
+      aria-label="Loading"
+    >
       <div className="kinetic" />
 
       <style jsx>{`
@@ -21,6 +27,10 @@ function Spinner({
           align-items: center;
           justify-content: center;
           padding: 20px;
+        }
+
+        .sm {
+          padding: 0;
         }
 
         .fullscreen {
@@ -36,6 +46,11 @@ function Spinner({
           width: 40px;
         }
 
+        .sm .kinetic {
+          height: 16px;
+          width: 16px;
+        }
+
         .kinetic::before,
         .kinetic::after {
           content: "";
@@ -48,6 +63,11 @@ function Spinner({
           border-bottom-color: ${accentPink};
           animation: rotateA 2s ease-in-out infinite 0.5s,
             color-change 2s ease-in-out infinite 1s;
+        }
+
+        .sm .kinetic::before,
+        .sm .kinetic::after {
+          border-width: 8px;
         }
 
         .kinetic::before {

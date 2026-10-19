@@ -8,9 +8,11 @@ export const FEED_CATEGORIES = [
   "Wallets",
   "Bags",
   "IDs & Cards",
-  "Pets",
   "Jewelry",
   "Accessories",
+  "Clothing",
+  "Documents",
+  "Other",
 ] as const;
 
 interface CategoryChipsProps {

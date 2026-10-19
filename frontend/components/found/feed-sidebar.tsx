@@ -1,7 +1,4 @@
-import Link from "next/link";
-import { Lock, Radar, RotateCcw } from "lucide-react";
-
-import { LocationRow } from "./location-row";
+import { Radar } from "lucide-react";
 
 interface FeedSidebarProps {
   topScore: number | null;
@@ -9,7 +6,7 @@ interface FeedSidebarProps {
   totalCount: number;
 }
 
-/** Desktop-only precision filter sidebar (hidden below lg). */
+/** Desktop-only feed overview (hidden below lg). */
 export function FeedSidebar({
   topScore,
   topTitle,
@@ -19,24 +16,8 @@ export function FeedSidebar({
     <aside className="hidden w-64 shrink-0 lg:block">
       <div className="sticky top-20 flex flex-col gap-4">
         <div className="rounded-xl border border-border bg-card p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Precision Filters</h2>
-            <Link
-              href="/found"
-              className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              Reset
-            </Link>
-          </div>
-
-          <p className="mb-2 text-[11px] font-bold tracking-widest text-muted-foreground uppercase">
-            Max Distance
-          </p>
-          <LocationRow />
-          <p className="mt-2 text-xs text-muted-foreground">
-            Enable live radar to limit results to 5 km around you.
-          </p>
+          <p className="text-xs text-muted-foreground">Matching discoveries</p>
+          <p className="mt-1 font-display text-2xl">{totalCount}</p>
         </div>
 
         {topScore !== null && (

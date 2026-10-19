@@ -7,8 +7,8 @@ import { LinkButton } from "@/components/ui/link-button";
 import { FoundItemCard } from "@/components/items/found-item-card";
 import { CategoryChips } from "@/components/found/category-chips";
 import { FeedSearch } from "@/components/found/feed-search";
+import { FeedFilters } from "@/components/found/feed-filters";
 import { FeedSidebar } from "@/components/found/feed-sidebar";
-import { LocationRow } from "@/components/found/location-row";
 import { cn } from "@/lib/utils";
 
 interface FoundPageProps {
@@ -88,7 +88,7 @@ export default async function FoundPage({ searchParams }: FoundPageProps) {
             <FeedSearch />
           </div>
           <div className="flex items-center gap-3">
-            <LocationRow />
+            <FeedFilters />
           </div>
         </div>
       </div>

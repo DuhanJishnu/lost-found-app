@@ -157,7 +157,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
         >
           {locating ? (
             <>
-              <Spinner />
+              <Spinner size="sm" />
               Locating…
             </>
           ) : (
