@@ -1,3 +1,5 @@
+import type { ClaimResponse } from "@/types/claim";
+
 export interface ClaimVerification {
   valid: boolean;
   found_item_id: number;
@@ -44,6 +46,30 @@ export async function updateMatchStatus(
 
     throw new Error(
       typeof detail === "string" ? detail : "Unable to update match",
+    );
+  }
+
+  return response.json();
+}
+
+export async function updateClaimStatus(
+  claimId: number,
+  status: "ACCEPTED" | "REJECTED",
+): Promise<ClaimResponse> {
+  const response = await fetch(`/api/claims/${claimId}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    const detail = error?.detail ?? error?.error;
+
+    throw new Error(
+      typeof detail === "string" ? detail : "Unable to update claim",
     );
   }
 

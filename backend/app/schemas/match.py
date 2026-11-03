@@ -2,6 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 from app.models.match import MatchStatus
+from app.schemas.claim import ClaimResponse
 
 
 class SimilarItemResponse(BaseModel):
@@ -42,6 +43,7 @@ class MatchResponse(BaseModel):
     created_at: datetime
     lost_item: MatchItemSummary | None = None
     found_item: MatchItemSummary | None = None
+    claim: ClaimResponse | None = None
 
     model_config = {
         "from_attributes": True

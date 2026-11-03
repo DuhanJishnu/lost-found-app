@@ -64,16 +64,18 @@ class NotificationService:
             claim_id=claim_id,
             title="New claim received",
             message=(
-                "Someone has claimed the item you reported as found."
+                "Someone has claimed the item you reported as found. Please review the claim."
             ),
         )
-    
+
     async def notify_claim_accepted(
         self,
         *,
         user_id: int,
         match_id: int,
         claim_id: int,
+        finder_name: str | None = None,
+        finder_email: str | None = None,
         commit: bool = True,
     ) -> Notification:
         create = (
@@ -82,17 +84,49 @@ class NotificationService:
             else self.repository.create_pending
         )
 
+        contact_text = ""
+        if finder_email:
+            contact_text = f" Contact the finder at {finder_email}" + (f" ({finder_name})" if finder_name else "") + " to arrange handover."
+
         return await create(
             user_id=user_id,
             match_id=match_id,
             claim_id=claim_id,
-            title="Claim accepted",
+            title="Claim accepted - Contact Shared",
             message=(
-                "Your claim was accepted. "
-                "The lost and found items have been closed."
+                f"Your claim was accepted! The lost and found items have been closed.{contact_text}"
             ),
         )
 
+    async def notify_claim_resolved_finder(
+        self,
+        *,
+        user_id: int,
+        match_id: int,
+        claim_id: int,
+        claimant_name: str | None = None,
+        claimant_email: str | None = None,
+        commit: bool = True,
+    ) -> Notification:
+        create = (
+            self.repository.create
+            if commit
+            else self.repository.create_pending
+        )
+
+        contact_text = ""
+        if claimant_email:
+            contact_text = f" Contact the owner at {claimant_email}" + (f" ({claimant_name})" if claimant_name else "") + " to arrange handover."
+
+        return await create(
+            user_id=user_id,
+            match_id=match_id,
+            claim_id=claim_id,
+            title="Claim Accepted - Contact Shared",
+            message=(
+                f"You accepted the claim! The item is now marked as closed.{contact_text}"
+            ),
+        )
 
     async def notify_claim_rejected(
         self,
@@ -114,8 +148,8 @@ class NotificationService:
             claim_id=claim_id,
             title="Claim rejected",
             message=(
-                "Your claim was rejected. "
-                "The item is available for matching again."
+                "Your claim was rejected by the finder. "
+                "The item remains available for matching."
             ),
         )
 

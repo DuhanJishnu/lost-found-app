@@ -3,11 +3,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_current_user_id
 from app.db.database import get_db
+from app.repositories.claim_repository import ClaimRepository
 from app.repositories.item_embedding_repository import (
     ItemEmbeddingRepository,
 )
 from app.repositories.item_repository import ItemRepository
 from app.repositories.match_repository import MatchRepository
+from app.repositories.user_repository import UserRepository
 from app.schemas.match import (
     MatchResponse,
     UpdateMatchStatusRequest,
@@ -43,6 +45,8 @@ def get_match_service(
         match_repository=MatchRepository(db),
         notification_service=notification_service,
         storage_service=StorageService(),
+        claim_repository=ClaimRepository(db),
+        user_repository=UserRepository(db),
     )
 
 

@@ -41,12 +41,13 @@ class ItemEmbeddingRepository:
         query_embedding: list[float],
         target_type: ItemType,
         limit: int = 10,
+        exclude_user_id: int | None = None,
     ):
         distance = ItemEmbedding.embedding.cosine_distance(
             query_embedding
         )
 
-        result = await self.db.execute(
+        query = (
             select(
                 Item,
                 distance.label("distance"),
@@ -59,9 +60,14 @@ class ItemEmbeddingRepository:
                 Item.type == target_type,
                 Item.status == ItemStatus.ACTIVE,
             )
-            .order_by(distance)
-            .limit(limit)
         )
+
+        if exclude_user_id is not None:
+            query = query.where(Item.user_id != exclude_user_id)
+
+        query = query.order_by(distance).limit(limit)
+
+        result = await self.db.execute(query)
 
         return result.all()
 

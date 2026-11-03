@@ -9,6 +9,7 @@ from app.repositories.claim_verification_repository import (
 from app.repositories.item_embedding_repository import ItemEmbeddingRepository
 from app.repositories.item_repository import ItemRepository
 from app.repositories.match_repository import MatchRepository
+from app.repositories.user_repository import UserRepository
 from app.services.claim_service import ClaimService
 from app.services.claim_verification_service import ClaimVerificationService
 from app.api.dependencies import get_current_user_id
@@ -41,6 +42,7 @@ def get_claim_service(
     match_repository = MatchRepository(db)
     item_repository = ItemRepository(db)
     embedding_repository = ItemEmbeddingRepository(db)
+    user_repository = UserRepository(db)
 
     notification_repository = NotificationRepository(db)
 
@@ -55,6 +57,7 @@ def get_claim_service(
         item_repository=item_repository,
         embedding_repository=embedding_repository,
         notification_service=notification_service,
+        user_repository=user_repository,
     )
 
 
@@ -159,7 +162,7 @@ async def create_claim(
     )
     await verification.db.commit()
 
-    return claim
+    return await service.to_claim_response(claim)
 
 @router.patch(
     "/{claim_id}/status",
@@ -172,11 +175,12 @@ async def update_claim_status(
     service: ClaimService = Depends(get_claim_service),
 ):
     try:
-        return await service.update_claim_status(
+        claim = await service.update_claim_status(
             claim_id=claim_id,
             user_id=current_user_id,
             status=data.status,
         )
+        return await service.to_claim_response(claim)
 
     except ValueError as exc:
         detail = str(exc)
@@ -209,9 +213,10 @@ async def get_claims(
     current_user_id: int = Depends(get_current_user_id),
     service: ClaimService = Depends(get_claim_service),
 ):
-    return await service.get_claims_for_user(
+    claims = await service.get_claims_for_user(
         current_user_id
     )
+    return [await service.to_claim_response(c) for c in claims]
 
 @router.get(
     "/{claim_id}",
@@ -223,10 +228,11 @@ async def get_claim(
     service: ClaimService = Depends(get_claim_service),
 ):
     try:
-        return await service.get_claim(
+        claim = await service.get_claim(
             claim_id=claim_id,
             user_id=current_user_id,
         )
+        return await service.to_claim_response(claim)
 
     except ValueError as exc:
         raise HTTPException(

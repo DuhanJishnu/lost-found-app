@@ -9,7 +9,12 @@ from app.repositories.claim_repository import ClaimRepository
 from app.repositories.item_embedding_repository import ItemEmbeddingRepository
 from app.repositories.item_repository import ItemRepository
 from app.repositories.match_repository import MatchRepository
-from app.schemas.claim import ClaimVerificationResponse
+from app.repositories.user_repository import UserRepository
+from app.schemas.claim import (
+    ClaimResponse,
+    ClaimVerificationResponse,
+    UserContactInfo,
+)
 from app.services.notification_service import NotificationService
 from app.services.similarity_service import SimilarityService
 
@@ -24,6 +29,7 @@ class ClaimService:
         item_repository: ItemRepository,
         embedding_repository: ItemEmbeddingRepository,
         notification_service: NotificationService,
+        user_repository: UserRepository | None = None,
     ):
         self.db = db
         self.claim_repository = claim_repository
@@ -31,6 +37,34 @@ class ClaimService:
         self.item_repository = item_repository
         self.embedding_repository = embedding_repository
         self.notification_service = notification_service
+        self.user_repository = user_repository or UserRepository(db)
+
+    async def to_claim_response(self, claim: Claim) -> ClaimResponse:
+        finder_contact = None
+        claimant_contact = None
+
+        if claim.status == ClaimStatus.ACCEPTED:
+            match = await self.match_repository.get_by_id(claim.match_id)
+            if match:
+                found_item = await self.item_repository.get_by_id(match.found_item_id)
+                if found_item:
+                    finder = await self.user_repository.get_by_id(found_item.user_id)
+                    if finder:
+                        finder_contact = UserContactInfo(name=finder.name, email=finder.email)
+                claimant = await self.user_repository.get_by_id(claim.claimant_id)
+                if claimant:
+                    claimant_contact = UserContactInfo(name=claimant.name, email=claimant.email)
+
+        return ClaimResponse(
+            id=claim.id,
+            match_id=claim.match_id,
+            claimant_id=claim.claimant_id,
+            status=claim.status,
+            created_at=claim.created_at,
+            updated_at=claim.updated_at,
+            finder_contact=finder_contact,
+            claimant_contact=claimant_contact,
+        )
 
     async def verify_claim_pair(
         self,
@@ -56,7 +90,7 @@ class ClaimService:
                 detail="Selected item is not a lost item",
             )
 
-        if lost_item.status != ItemStatus.ACTIVE:
+        if lost_item.status not in (ItemStatus.ACTIVE, ItemStatus.MATCHED):
             raise HTTPException(
                 status_code=400,
                 detail="Lost item is no longer active",
@@ -76,7 +110,7 @@ class ClaimService:
                 detail="Selected item is not a found item",
             )
 
-        if found_item.status != ItemStatus.ACTIVE:
+        if found_item.status not in (ItemStatus.ACTIVE, ItemStatus.MATCHED):
             raise HTTPException(
                 status_code=400,
                 detail="Found item is no longer available",
@@ -240,9 +274,7 @@ class ClaimService:
                 "Only the finder can accept or reject this claim"
             )
 
-        # 7. Reject claim — notification joins the same transaction
-        # (Phase 9.5): a failed notify rolls the decision back instead
-        # of silently dropping it.
+        # 7. Reject claim
         if status == ClaimStatus.REJECTED:
             updated_claim = await self.claim_repository.reject_claim(
                 claim_id=claim.id,
@@ -265,7 +297,7 @@ class ClaimService:
 
             return updated_claim
 
-        # 8. Accept claim — same transactional notify.
+        # 8. Accept claim — shares contact details between parties
         if status == ClaimStatus.ACCEPTED:
             updated_claim = await self.claim_repository.accept_claim(
                 claim_id=claim.id,
@@ -277,12 +309,28 @@ class ClaimService:
             if updated_claim is None:
                 raise ValueError("Claim has already been decided")
 
+            finder = await self.user_repository.get_by_id(found_item.user_id)
+            claimant = await self.user_repository.get_by_id(claim.claimant_id)
+
             await self.notification_service.notify_claim_accepted(
                 user_id=claim.claimant_id,
                 match_id=match.id,
                 claim_id=claim.id,
+                finder_name=finder.name if finder else None,
+                finder_email=finder.email if finder else None,
                 commit=False,
             )
+
+            if finder:
+                await self.notification_service.notify_claim_resolved_finder(
+                    user_id=finder.id,
+                    match_id=match.id,
+                    claim_id=claim.id,
+                    claimant_name=claimant.name if claimant else None,
+                    claimant_email=claimant.email if claimant else None,
+                    commit=False,
+                )
+
             await self.db.commit()
             await self.db.refresh(updated_claim)
 
@@ -339,7 +387,7 @@ class ClaimService:
                 detail="Selected item is not a lost item",
             )
 
-        if lost_item.status != ItemStatus.ACTIVE:
+        if lost_item.status not in (ItemStatus.ACTIVE, ItemStatus.MATCHED):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Lost item is no longer active",
@@ -362,7 +410,7 @@ class ClaimService:
                 detail="Selected item is not a found item",
             )
 
-        if found_item.status != ItemStatus.ACTIVE:
+        if found_item.status not in (ItemStatus.ACTIVE, ItemStatus.MATCHED):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Found item is no longer available",
@@ -445,7 +493,6 @@ class ClaimService:
                 )
 
                 # 7. Notify the finder inside the same transaction
-                # (Phase 9.5) instead of after the commit.
                 await self.notification_service.notify_claim_created(
                     user_id=found_item.user_id,
                     match_id=match.id,
@@ -463,4 +510,3 @@ class ClaimService:
             )
 
         return claim
-

@@ -1,11 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
+  CheckCircle2,
   ChevronRight,
+  Clock,
   Handshake,
   Lock,
+  Mail,
   Radar,
   ShieldCheck,
   X,
@@ -18,7 +22,7 @@ import { ItemImage } from "@/components/items/item-image";
 import { ItemTypeBadge } from "@/components/items/item-type-badge";
 import { timeAgo } from "@/lib/format";
 import { haversineKm } from "@/lib/geo";
-import { updateMatchStatus } from "@/lib/claims";
+import { updateClaimStatus, updateMatchStatus } from "@/lib/claims";
 import type {
   MatchItemSummary,
   MatchResponse,
@@ -41,7 +45,9 @@ export function MatchesInbox({
   const [selectedId, setSelectedId] = useState<number | null>(
     initialSelectedId ?? (matches.length > 0 ? matches[0].id : null),
   );
-  const [acting, setActing] = useState<"CONFIRMED" | "REJECTED" | null>(null);
+  const [acting, setActing] = useState<
+    "CONFIRMED" | "REJECTED" | "CLAIM_ACCEPTED" | "CLAIM_REJECTED" | null
+  >(null);
   const [error, setError] = useState("");
 
   const selected =
@@ -66,11 +72,30 @@ export function MatchesInbox({
     }
   }
 
+  async function handleClaimDecision(status: "ACCEPTED" | "REJECTED") {
+    if (!selected?.claim) return;
+
+    setActing(status === "ACCEPTED" ? "CLAIM_ACCEPTED" : "CLAIM_REJECTED");
+    setError("");
+
+    try {
+      await updateClaimStatus(selected.claim.id, status);
+      router.refresh();
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Unable to update claim",
+      );
+    } finally {
+      setActing(null);
+    }
+  }
+
   if (!selected) return null;
 
   const score = Math.round(selected.similarity_score * 100);
   const isLostOwner = selected.lost_item?.user_id === currentUserId;
   const isPending = selected.status === "PENDING";
+  const claim = selected.claim;
 
   const categorySame =
     selected.lost_item !== null &&
@@ -113,7 +138,6 @@ export function MatchesInbox({
       strong: distanceKm !== null && distanceKm < 5,
     },
   ];
-  const strongCount = signals.filter((signal) => signal.strong).length;
 
   return (
     <div className="flex flex-col gap-6 lg:grid lg:grid-cols-12 lg:items-start">
@@ -127,10 +151,6 @@ export function MatchesInbox({
           <p className="flex items-center gap-1.5 font-bold text-primary">
             <Radar className="h-5 w-5" />
             {score}% Match Score
-          </p>
-
-          <p className="text-xs tracking-wider text-muted-foreground uppercase">
-            Match #{selected.id}
           </p>
         </div>
 
@@ -152,9 +172,6 @@ export function MatchesInbox({
             <div className="flex items-center justify-between">
               <p className="text-xs tracking-wider text-muted-foreground uppercase">
                 Match signals
-              </p>
-              <p className="text-sm font-bold text-primary">
-                {strongCount} / 3 strong
               </p>
             </div>
 
@@ -182,54 +199,199 @@ export function MatchesInbox({
 
           <FormError message={error} />
 
-          {isPending && (
-            <p className="hidden items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs leading-relaxed text-muted-foreground lg:flex">
-              <ShieldCheck className="h-4 w-4 flex-shrink-0 text-primary" />
-              Safe handover requires mutual claim verification before any
-              physical rendezvous is scheduled.
-            </p>
-          )}
+          {/* Claim Accepted State: Safe Handover & Contact Sharing */}
+          {claim?.status === "ACCEPTED" && (
+            <div className="space-y-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <div>
+                  <p className="font-semibold text-emerald-950 dark:text-emerald-50">
+                    Claim Verified &amp; Accepted!
+                  </p>
+                  <p className="mt-0.5 text-sm text-emerald-800/80 dark:text-emerald-200/80">
+                    {isLostOwner
+                      ? "The finder has verified your claim! Contact information is shared below so you can arrange safe handover."
+                      : "You verified and accepted this claim. The owner's contact information is shared below."}
+                  </p>
+                </div>
+              </div>
 
-          {isPending && isLostOwner && (
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => handleDecision("REJECTED")}
-                disabled={acting !== null}
-                className="flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-muted font-medium transition-colors hover:bg-accent disabled:opacity-50"
-              >
-                {acting === "REJECTED" ? (
-                  <Spinner />
-                ) : (
-                  <X className="h-4 w-4" />
-                )}
-                Not a Match
-              </button>
+              <div className="space-y-2 rounded-lg border border-border bg-card p-3 shadow-sm">
+                <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                  {isLostOwner ? "Finder Contact Details" : "Owner Contact Details"}
+                </p>
+                <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+                  <div>
+                    <p className="font-medium text-foreground">
+                      {isLostOwner
+                        ? claim.finder_contact?.name || "Finder"
+                        : claim.claimant_contact?.name || "Owner"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {isLostOwner
+                        ? claim.finder_contact?.email
+                        : claim.claimant_contact?.email}
+                    </p>
+                  </div>
 
-              <button
-                type="button"
-                onClick={() => handleDecision("CONFIRMED")}
-                disabled={acting !== null}
-                className="flex h-11 flex-[2] items-center justify-center gap-2 rounded-lg bg-primary font-bold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
-              >
-                {acting === "CONFIRMED" ? (
-                  <Spinner />
-                ) : (
-                  <Handshake className="h-5 w-5" />
-                )}
-                Confirm & Request
-              </button>
+                  {(isLostOwner
+                    ? claim.finder_contact?.email
+                    : claim.claimant_contact?.email) && (
+                    <a
+                      href={`mailto:${
+                        isLostOwner
+                          ? claim.finder_contact?.email
+                          : claim.claimant_contact?.email
+                      }`}
+                      className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition-all hover:brightness-110"
+                    >
+                      <Mail className="h-4 w-4" />
+                      Contact via Email
+                    </a>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
-          {isPending && !isLostOwner && (
+          {/* Claim Rejected State */}
+          {claim?.status === "REJECTED" && (
+            <div className="rounded-xl border border-border bg-muted/60 p-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                {isLostOwner
+                  ? "The finder reviewed your claim and concluded this item does not match."
+                  : "You rejected the claim for this item."}
+              </p>
+            </div>
+          )}
+
+          {/* Claim Pending State - Finder View */}
+          {claim?.status === "PENDING" && !isLostOwner && (
+            <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+              <div className="flex items-start gap-3">
+                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                <div>
+                  <p className="font-semibold text-foreground">
+                    Incoming Claim Request
+                  </p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
+                    The person who lost this item has submitted an ownership claim.
+                    Please compare the images and details above to verify if they match.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleClaimDecision("REJECTED")}
+                  disabled={acting !== null}
+                  className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-muted text-sm font-medium transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                >
+                  {acting === "CLAIM_REJECTED" ? (
+                    <Spinner />
+                  ) : (
+                    <X className="h-4 w-4" />
+                  )}
+                  Reject Claim
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleClaimDecision("ACCEPTED")}
+                  disabled={acting !== null}
+                  className="flex h-10 flex-[2] items-center justify-center gap-2 rounded-lg bg-emerald-600 text-sm font-bold text-white transition-all hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {acting === "CLAIM_ACCEPTED" ? (
+                    <Spinner />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  Verify &amp; Accept Claim
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Claim Pending State - Lost Owner View */}
+          {claim?.status === "PENDING" && isLostOwner && (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+              <div className="flex items-center gap-3">
+                <Clock className="h-5 w-5 shrink-0 text-primary" />
+                <div>
+                  <p className="font-semibold text-foreground">
+                    Claim Pending Review
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    You submitted an ownership claim. The finder has been
+                    notified and will verify the details before contact information
+                    is shared.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* No Claim Yet - Lost Owner Actions */}
+          {!claim && isPending && isLostOwner && (
+            <div className="space-y-3">
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Compare the photos and details. If this matches your lost item,
+                proceed to verify ownership and file a claim.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleDecision("REJECTED")}
+                  disabled={acting !== null}
+                  className="flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-muted font-medium transition-colors hover:bg-accent disabled:opacity-50"
+                >
+                  {acting === "REJECTED" ? (
+                    <Spinner />
+                  ) : (
+                    <X className="h-4 w-4" />
+                  )}
+                  Not a Match
+                </button>
+
+                {selected.found_item && selected.lost_item ? (
+                  <Link
+                    href={`/found/${selected.found_item.id}/claim/verify?lostItemId=${selected.lost_item.id}`}
+                    className="flex h-11 flex-[2] items-center justify-center gap-2 rounded-lg bg-primary font-bold text-primary-foreground transition-all hover:brightness-110"
+                  >
+                    <Handshake className="h-5 w-5" />
+                    Claim Item (Verify)
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleDecision("CONFIRMED")}
+                    disabled={acting !== null}
+                    className="flex h-11 flex-[2] items-center justify-center gap-2 rounded-lg bg-primary font-bold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
+                  >
+                    {acting === "CONFIRMED" ? (
+                      <Spinner />
+                    ) : (
+                      <Handshake className="h-5 w-5" />
+                    )}
+                    Confirm Match
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* No Claim Yet - Finder View */}
+          {!claim && isPending && !isLostOwner && (
             <p className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
-              Only the reporter can confirm this match. You will be
-              notified if they confirm or start a claim.
+              A potential match was detected. The person who lost this item has
+              been notified and will review the photos before filing a claim.
             </p>
           )}
 
-          {!isPending && (
+          {/* Match Rejected / Closed without Claim */}
+          {!claim && !isPending && (
             <p className="flex items-center justify-center gap-2 rounded-lg border p-4 text-center text-sm text-muted-foreground">
               <ShieldCheck className="h-4 w-4 text-primary" />
               {selected.status === "CONFIRMED"
@@ -242,15 +404,6 @@ export function MatchesInbox({
 
       {matches.length > 1 && (
         <section className="lg:order-1 lg:col-span-4">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-xs tracking-wider text-muted-foreground uppercase">
-              Candidate queue
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              Sorted by confidence
-            </p>
-          </div>
-
           <Card className="gap-0 overflow-hidden py-0">
             {matches
               .filter((match) => match.id !== selected.id)
@@ -264,10 +417,10 @@ export function MatchesInbox({
                     index < rest.length - 1 && "border-b border-border",
                   )}
                 >
-                  <span className="h-2 w-2 flex-shrink-0 rounded-full bg-primary" />
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
 
                   {match.found_item?.image_url ? (
-                    <span className="block h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg">
+                    <span className="block h-14 w-14 shrink-0 overflow-hidden rounded-lg">
                       <ItemImage
                         src={match.found_item.image_url}
                         alt={match.found_item.title}
@@ -275,7 +428,7 @@ export function MatchesInbox({
                       />
                     </span>
                   ) : (
-                    <span className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-muted">
                       <Lock className="h-5 w-5 text-muted-foreground" />
                     </span>
                   )}
@@ -285,7 +438,7 @@ export function MatchesInbox({
                       <span className="truncate font-semibold">
                         {match.found_item?.title ?? `Match #${match.id}`}
                       </span>
-                      <span className="flex-shrink-0 text-xs text-muted-foreground">
+                      <span className="shrink-0 text-xs text-muted-foreground">
                         {timeAgo(match.created_at)}
                       </span>
                     </span>
@@ -300,7 +453,7 @@ export function MatchesInbox({
                     </span>
                   </span>
 
-                  <ChevronRight className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+                  <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
                 </button>
               ))}
           </Card>

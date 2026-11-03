@@ -1,3 +1,5 @@
+import type { ClaimResponse } from "./claim";
+
 export type MatchStatus = "PENDING" | "CONFIRMED" | "REJECTED";
 
 export interface MatchItemSummary {
@@ -23,4 +25,5 @@ export interface MatchResponse {
   created_at: string;
   lost_item: MatchItemSummary | null;
   found_item: MatchItemSummary | null;
+  claim?: ClaimResponse | null;
 }

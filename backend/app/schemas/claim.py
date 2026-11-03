@@ -5,6 +5,11 @@ from pydantic import BaseModel, Field
 from app.models.claim import ClaimStatus
 
 
+class UserContactInfo(BaseModel):
+    name: str
+    email: str
+
+
 class CreateClaimRequest(BaseModel):
     match_id: int
 
@@ -24,6 +29,7 @@ class ClaimVerificationResponse(BaseModel):
 class UpdateClaimStatusRequest(BaseModel):
     status: ClaimStatus
 
+
 class ClaimResponse(BaseModel):
     id: int
     match_id: int
@@ -31,8 +37,11 @@ class ClaimResponse(BaseModel):
     status: ClaimStatus
     created_at: datetime
     updated_at: datetime
+    finder_contact: UserContactInfo | None = None
+    claimant_contact: UserContactInfo | None = None
 
     model_config = {"from_attributes": True}
+
 
 class StartClaimRequest(BaseModel):
     lost_item_id: int = Field(gt=0)
