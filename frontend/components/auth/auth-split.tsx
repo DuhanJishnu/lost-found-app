@@ -3,6 +3,9 @@ import Image from "next/image";
 interface AuthSplitProps {
   title: string;
   description: string;
+  badge?: string;
+  pillars?: { icon?: any; title: string; description: string }[];
+  footnote?: string;
   children: React.ReactNode;
 }
 

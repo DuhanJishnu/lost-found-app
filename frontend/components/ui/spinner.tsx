@@ -5,6 +5,7 @@ interface KineticSpinnerProps {
   accentPink?: string;
   accentWhite?: string;
   size?: "default" | "sm";
+  className?: string;
 }
 
 function Spinner({
@@ -12,10 +13,11 @@ function Spinner({
   accentPink = "#00AEBB",
   accentWhite = "#e2e7ee",
   size = "default",
+  className = "",
 }: KineticSpinnerProps) {
   return (
     <div
-      className={`spinner-container ${size} ${fullScreen ? "fullscreen" : ""}`}
+      className={`spinner-container ${size} ${fullScreen ? "fullscreen" : ""} ${className}`}
       role="status"
       aria-label="Loading"
     >
@@ -29,30 +31,29 @@ function Spinner({
           padding: 20px;
         }
 
-        .sm {
-          padding: 0;
-        }
-
-        .fullscreen {
-          height: 100vh;
-          width: 100vw;
-          overflow: hidden;
-          margin: 0;
+        .spinner-container.fullscreen {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(255, 255, 255, 0.8);
+          z-index: 9999;
         }
 
         .kinetic {
           position: relative;
-          height: 40px;
-          width: 40px;
+          height: 50px;
+          width: 50px;
         }
 
-        .sm .kinetic {
-          height: 16px;
-          width: 16px;
+        .spinner-container.sm .kinetic {
+          height: 24px;
+          width: 24px;
         }
 
-        .kinetic::before,
-        .kinetic::after {
+        .kinetic::after,
+        .kinetic::before {
           content: "";
           position: absolute;
           top: 0;
@@ -61,18 +62,19 @@ function Spinner({
           height: 0;
           border: 20px solid transparent;
           border-bottom-color: ${accentPink};
+          border-radius: 50%;
           animation: rotateA 2s ease-in-out infinite 0.5s,
             color-change 2s ease-in-out infinite 1s;
         }
 
-        .sm .kinetic::before,
-        .sm .kinetic::after {
-          border-width: 8px;
+        .spinner-container.sm .kinetic::after,
+        .spinner-container.sm .kinetic::before {
+          border-width: 10px;
         }
 
         .kinetic::before {
-          animation: rotateB 2s ease-in-out infinite,
-            color-change 2s ease-in-out infinite;
+          transform: rotate(90deg);
+          animation: rotateB 2s ease-in-out infinite;
         }
 
         @keyframes rotateA {
@@ -104,7 +106,11 @@ function Spinner({
         }
 
         @keyframes color-change {
-          75% {
+          0%,
+          100% {
+            border-bottom-color: ${accentPink};
+          }
+          50% {
             border-bottom-color: ${accentWhite};
           }
         }
@@ -113,4 +119,4 @@ function Spinner({
   );
 }
 
-export { Spinner }
+export { Spinner };
