@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Pencil, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Pencil, Sparkles, Undo2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,11 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { ItemType } from "@/types/items";
 import { ImageUploader, type UploadedPhoto } from "./image-uploader";
+import {
+  ImageVerificationDialog,
+  type ImageMismatch,
+  type VerificationSuggestions,
+} from "./image-verification-dialog";
 import { ItemTypeToggle } from "./item-type-toggle";
 import type { PickedLocation } from "./location-picker";
 import { cn } from "@/lib/utils";
@@ -72,8 +77,137 @@ export function ItemForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Image verification state
+  const [verifying, setVerifying] = useState(false);
+  const [showMismatchDialog, setShowMismatchDialog] = useState(false);
+  const [mismatches, setMismatches] = useState<ImageMismatch[]>([]);
+  const [aiSuggestions, setAiSuggestions] = useState<VerificationSuggestions | null>(null);
+
+  // Backup of user's original inputs before applying suggestions so they can undo
+  const [originalDetails, setOriginalDetails] = useState<{
+    title: string;
+    description: string;
+    category: string;
+  } | null>(null);
+  const [aiAppliedBanner, setAiAppliedBanner] = useState(false);
+
   const dateLabel =
     type === "LOST" ? "Date & time lost (optional)" : "Date & time found (optional)";
+
+  function computeEffectiveReplacements(
+    currentTitle: string,
+    currentDescription: string,
+    currentCategory: string,
+    currentMismatches: ImageMismatch[],
+    suggestions?: VerificationSuggestions | null,
+  ) {
+    let newTitle = suggestions?.suggested_title?.trim() || "";
+    let newDescription = suggestions?.suggested_description?.trim() || "";
+    let newCategory = suggestions?.suggested_category?.trim() || "";
+
+    if (!newTitle) {
+      newTitle = currentTitle;
+      for (const m of currentMismatches) {
+        if (!m.user_said || !m.image_shows) continue;
+        const tokens = m.user_said.split(/[\s,()\/]+/).filter((t) => t.length > 2);
+        for (const token of tokens) {
+          const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const re = new RegExp(`\\b${escaped}\\b`, "gi");
+          if (re.test(newTitle)) {
+            newTitle = newTitle.replace(re, m.image_shows);
+          }
+        }
+      }
+      const brandMismatch = currentMismatches.find((m) => m.field === "brand");
+      if (brandMismatch && !newTitle.toLowerCase().includes(brandMismatch.image_shows.toLowerCase())) {
+        newTitle = `${brandMismatch.image_shows} ${newTitle}`.trim();
+      }
+    }
+
+    if (!newDescription) {
+      newDescription = currentDescription;
+      for (const m of currentMismatches) {
+        if (!m.user_said || !m.image_shows) continue;
+        const tokens = m.user_said.split(/[\s,()\/]+/).filter((t) => t.length > 2);
+        let replaced = false;
+        for (const token of tokens) {
+          const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const re = new RegExp(`\\b${escaped}\\b`, "gi");
+          if (re.test(newDescription)) {
+            newDescription = newDescription.replace(re, m.image_shows);
+            replaced = true;
+          }
+        }
+        if (!replaced && !newDescription.toLowerCase().includes(m.image_shows.toLowerCase())) {
+          newDescription = `${newDescription.trim()} (${m.field}: ${m.image_shows})`.trim();
+        }
+      }
+    }
+
+    if (!newCategory) {
+      const catMismatch = currentMismatches.find((m) => m.field === "category");
+      if (catMismatch) {
+        const found = CATEGORIES.find(
+          (c) => c.toLowerCase() === catMismatch.image_shows.toLowerCase(),
+        );
+        if (found) newCategory = found;
+      }
+    }
+    if (!newCategory) {
+      newCategory = currentCategory;
+    }
+
+    return {
+      title: newTitle,
+      description: newDescription,
+      category: newCategory,
+    };
+  }
+
+  function applyAiSuggestions() {
+    const computed = computeEffectiveReplacements(
+      title,
+      description,
+      category,
+      mismatches,
+      aiSuggestions,
+    );
+
+    // Save previous user details before overwriting, so they can undo
+    setOriginalDetails({
+      title,
+      description,
+      category,
+    });
+
+    setTitle(computed.title);
+    setDescription(computed.description);
+    if (computed.category) {
+      setCategory(computed.category);
+    }
+    return computed;
+  }
+
+  // 1. Go back and edit details: loads AI suggestions into the form so they aren't lost
+  function handleGoBackAndEdit() {
+    applyAiSuggestions();
+    setShowMismatchDialog(false);
+    setAiAppliedBanner(true);
+  }
+
+  // 2. Keep AI suggestion and submit: applies AI suggestions and proceeds directly to location & submit step
+  function handleKeepAiAndSubmit() {
+    applyAiSuggestions();
+    setShowMismatchDialog(false);
+    setAiAppliedBanner(true);
+    setStep(3);
+  }
+
+  // 3. Keep what I typed: leaves user details as typed and proceeds to location & submit step
+  function handleKeepWhatITyped() {
+    setShowMismatchDialog(false);
+    setStep(3);
+  }
 
   function fillOccurredNow() {
     if (nowSelected) {
@@ -89,6 +223,52 @@ export function ItemForm() {
         `T${pad(now.getHours())}:${pad(now.getMinutes())}`,
     );
     setNowSelected(true);
+  }
+
+  async function verifyAndContinue() {
+    // If no photos uploaded, skip verification entirely
+    if (photos.length === 0) {
+      setStep(3);
+      return;
+    }
+
+    setVerifying(true);
+    setError("");
+
+    try {
+      // Verify the first uploaded image against the user-provided details
+      const response = await fetch("/api/items/verify-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image_key: photos[0].objectKey,
+          title,
+          description,
+          category,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.match && data.mismatches?.length > 0) {
+        // Show mismatch dialog
+        setMismatches(data.mismatches);
+        setAiSuggestions({
+          suggested_title: data.suggested_title,
+          suggested_description: data.suggested_description,
+          suggested_category: data.suggested_category,
+        });
+        setShowMismatchDialog(true);
+      } else {
+        // All good — proceed to step 3
+        setStep(3);
+      }
+    } catch {
+      // If verification fails for any reason, don't block — proceed
+      setStep(3);
+    } finally {
+      setVerifying(false);
+    }
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -210,7 +390,7 @@ export function ItemForm() {
             <form
               onSubmit={(event) => {
                 event.preventDefault();
-                setStep(3);
+                verifyAndContinue();
               }}
               className="space-y-6"
             >
@@ -238,6 +418,34 @@ export function ItemForm() {
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
               </div>
+
+              {aiAppliedBanner && (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Sparkles className="h-4 w-4 shrink-0" />
+                    <span>
+                      AI suggestions applied to your details. You can review or edit them before continuing.
+                    </span>
+                  </div>
+                  {originalDetails && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setTitle(originalDetails.title);
+                        setDescription(originalDetails.description);
+                        setCategory(originalDetails.category);
+                        setAiAppliedBanner(false);
+                      }}
+                      className="h-7 shrink-0 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      <Undo2 className="mr-1 h-3.5 w-3.5" />
+                      Undo
+                    </Button>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
                 <div className="space-y-6">
@@ -327,9 +535,18 @@ export function ItemForm() {
                   Back
                 </Button>
 
-                <Button type="submit" className="flex-1">
-                  Continue
-                  <ArrowRight className="h-4 w-4" />
+                <Button type="submit" className="flex-1" disabled={verifying}>
+                  {verifying ? (
+                    <>
+                      <Spinner size="sm" />
+                      Verifying…
+                    </>
+                  ) : (
+                    <>
+                      Continue
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
                 </Button>
               </div>
             </form>
@@ -353,6 +570,15 @@ export function ItemForm() {
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              {aiAppliedBanner && (
+                <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-xs text-primary">
+                  <Sparkles className="h-4 w-4 shrink-0" />
+                  <span>
+                    AI suggestions applied to your report details. Pin a location (optional) and submit your report.
+                  </span>
+                </div>
+              )}
+
               <LocationPicker value={location} onChange={setLocation} />
 
               <FormError message={error} />
@@ -391,6 +617,38 @@ export function ItemForm() {
           </CardContent>
         </Card>
       )}
+
+      {/* Image verification mismatch dialog */}
+      <ImageVerificationDialog
+        open={showMismatchDialog}
+        onOpenChange={setShowMismatchDialog}
+        mismatches={mismatches}
+        suggestedTitle={
+          mismatches.length > 0
+            ? computeEffectiveReplacements(
+                title,
+                description,
+                category,
+                mismatches,
+                aiSuggestions,
+              ).title
+            : undefined
+        }
+        suggestedDescription={
+          mismatches.length > 0
+            ? computeEffectiveReplacements(
+                title,
+                description,
+                category,
+                mismatches,
+                aiSuggestions,
+              ).description
+            : undefined
+        }
+        onGoBackAndEdit={handleGoBackAndEdit}
+        onKeepAiAndSubmit={handleKeepAiAndSubmit}
+        onKeepWhatITyped={handleKeepWhatITyped}
+      />
     </div>
   );
 }

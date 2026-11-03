@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,14 +8,21 @@ from app.models.item import ItemStatus, ItemType
 from app.repositories.item_repository import ItemRepository
 from app.schemas.item import CreateItemRequest, ItemResponse
 from app.schemas.found_feed import FoundItemDetailResponse
+from app.schemas.image_verification import (
+    ImageVerificationRequest,
+    ImageVerificationResponse,
+)
 from app.services.item_service import ItemService
 from app.services.job_queue import enqueue_item_processing
 from app.services.storage_service import StorageService
+from app.services.image_verification_service import ImageVerificationService
 from app.services.found_feed_service import (
     FoundFeedService,
     FoundFeedItemResponse,
     LostItemRequiredError,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/items",
@@ -27,6 +35,38 @@ def get_item_service(
 ) -> ItemService:
     repository = ItemRepository(db)
     return ItemService(repository, StorageService())
+
+
+@router.post(
+    "/verify-image",
+    response_model=ImageVerificationResponse,
+)
+async def verify_image(
+    data: ImageVerificationRequest,
+    user_id: int = Depends(get_current_user_id),
+):
+    """Verify uploaded image against user-provided item details.
+
+    Uses Gemini vision to detect major mismatches (wrong object type,
+    colour, brand, shape). Minor/ambiguous differences are ignored.
+    """
+    service = ImageVerificationService()
+
+    try:
+        result = await service.verify_image_against_details(
+            image_key=data.image_key,
+            title=data.title,
+            description=data.description,
+            category=data.category,
+        )
+    except Exception as exc:
+        logger.exception("Image verification failed with exception: %s", exc)
+        return ImageVerificationResponse(
+            match=True,
+            mismatches=[],
+        )
+
+    return ImageVerificationResponse(**result.to_dict())
 
 
 @router.post(
@@ -222,4 +262,3 @@ async def get_item(
         )
 
     return detail
-
