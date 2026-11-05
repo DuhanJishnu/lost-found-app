@@ -92,7 +92,7 @@ class NotificationService:
             user_id=user_id,
             match_id=match_id,
             claim_id=claim_id,
-            title="Claim accepted - Contact Shared",
+            title="Claim accepted",
             message=(
                 f"Your claim was accepted! The lost and found items have been closed.{contact_text}"
             ),

@@ -289,7 +289,7 @@ class MatchService:
             )
             if rejected is None:
                 raise ValueError("Match has already been decided")
-            return await self._to_enriched_match(rejected)
+            return rejected
 
         if status == MatchStatus.CONFIRMED:
             found_item = await self.item_repository.get_by_id(
@@ -314,6 +314,6 @@ class MatchService:
             )
             if confirmed is None:
                 raise ValueError("Match has already been decided")
-            return await self._to_enriched_match(confirmed)
+            return confirmed
 
         raise ValueError("Invalid match status")
