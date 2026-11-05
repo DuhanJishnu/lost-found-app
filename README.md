@@ -276,13 +276,12 @@ This application can be deployed with **$0/month hosting costs** using modern de
 - Generate API tokens with Read & Write permissions.
 - Under bucket **Settings > CORS**, add a policy allowing `PUT`, `GET`, `HEAD` from your production frontend domain.
 
-### 4. Backend & Worker: **Render** / **Koyeb** (Free Tier)
-- Fork or connect your GitHub repository.
-- **Web Service**:
+### 4. Backend & Worker: **Render** (100% Free Web Service)
+- Fork or connect your GitHub repository to [render.com](https://render.com).
+- **Web Service** (Runs both FastAPI and the Arq background worker concurrently via FastAPI lifespan — no separate paid worker needed!):
+  - Root Directory: `backend`
   - Build command: `pip install -r requirements.txt && alembic upgrade head`
   - Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-- **Background Worker**:
-  - Start command: `arq app.worker.WorkerSettings`
 
 ### 5. Frontend: **Vercel** (Permanent Free Tier)
 - Import your GitHub repository to [vercel.com](https://vercel.com).
